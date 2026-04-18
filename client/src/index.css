@@ -1,0 +1,594 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ============================================
+   KelimeLink — Minimalist Tasarım Sistemi
+   ============================================ */
+
+:root {
+  /* Renkler */
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-border: #e5e5e5;
+  --color-border-light: #f0f0f0;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+
+  /* Oyun renkleri */
+  --color-word-a: #2563eb;
+  --color-word-a-light: #dbeafe;
+  --color-word-a-bg: #eff6ff;
+  --color-word-b: #dc2626;
+  --color-word-b-light: #fecaca;
+  --color-word-b-bg: #fef2f2;
+  --color-word-both: #7c3aed;
+  --color-word-both-light: #ede9fe;
+  --color-word-neutral: #6b7280;
+  --color-word-neutral-light: #f3f4f6;
+  --color-link-line: #2563eb;
+  --color-gap-line: #d1d5db;
+  --color-success: #059669;
+  --color-success-light: #d1fae5;
+  --color-link-row-linked: #059669;
+  --color-link-row-linked-bg: #d1fae5;
+  --color-link-row-linked-hover-bg: #c8f9e3;
+
+  /* Boyutlar */
+  --sidebar-width: 340px;
+  --header-height: 56px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Gölge */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.12);
+
+  /* Geçişler */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 400ms ease;
+}
+
+/* ============================================
+   Reset & Base
+   ============================================ */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ============================================
+   App Layout
+   ============================================ */
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ============================================
+   Header
+   ============================================ */
+
+.app-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 0 20px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.app-header__title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.app-header__subtitle {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  margin-left: 8px;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================
+   Main Content
+   ============================================ */
+
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ============================================
+   Sidebar
+   ============================================ */
+
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.sidebar__section {
+  padding: 20px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.sidebar__section:last-child {
+  border-bottom: none;
+}
+
+.sidebar__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+/* Kelime Ekleme */
+.guess-form {
+  display: flex;
+  gap: 8px;
+}
+
+.guess-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.guess-input:focus {
+  border-color: var(--color-word-a);
+  box-shadow: 0 0 0 3px var(--color-word-a-light);
+}
+
+.guess-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.guess-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-text-primary);
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.guess-btn:hover {
+  background: #374151;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.guess-btn:active {
+  transform: translateY(0);
+}
+
+.guess-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Durum Bilgisi */
+.status-text {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.status-text strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* Hata Mesajı */
+.error-message {
+  font-size: 0.8rem;
+  color: #dc2626;
+  padding: 8px 12px;
+  background: #fef2f2;
+  border-radius: var(--radius-sm);
+  margin-top: 8px;
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+/* Başlangıç Kelimeleri */
+.starting-words {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+
+.starting-word {
+  padding: 6px 16px;
+  border-radius: var(--radius-xl);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 2px solid;
+}
+
+.starting-word--a {
+  color: var(--color-word-a);
+  border-color: var(--color-word-a);
+  background: var(--color-word-a-bg);
+}
+
+.starting-word--b {
+  color: var(--color-word-b);
+  border-color: var(--color-word-b);
+  background: var(--color-word-b-bg);
+}
+
+.starting-words__arrow {
+  color: var(--color-text-muted);
+  font-size: 1.2rem;
+}
+
+/* Bağlantılar Tablosu */
+.links-info {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.links-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.links-table::-webkit-scrollbar {
+  width: 4px;
+}
+
+.links-table::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.links-table::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  transition: background var(--transition-fast);
+  border-left: 3px solid transparent;
+}
+
+.link-row:hover {
+  background: var(--color-bg);
+}
+
+.link-row--linked {
+  background: var(--color-link-row-linked-bg);
+  border-left-color: var(--color-link-row-linked);
+}
+
+.link-row--linked:hover {
+  background: var(--color-link-row-linked-hover-bg);
+  border-left-color: var(--color-link-row-linked);
+}
+
+.link-row__word {
+  flex: 1;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-row__dash {
+  color: var(--color-text-muted);
+  margin: 0 8px;
+}
+
+.link-row__score {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 48px;
+  text-align: right;
+}
+
+.link-row--linked .link-row__score {
+  color: var(--color-link-row-linked);
+}
+
+.link-row:not(.link-row--linked) .link-row__score {
+  color: var(--color-text-muted);
+}
+
+/* Seçili kelime */
+.selected-word-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.selected-word-badge {
+  padding: 4px 12px;
+  background: var(--color-text-primary);
+  color: white;
+  border-radius: var(--radius-xl);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* ============================================
+   Graph Canvas
+   ============================================ */
+
+.graph-container {
+  flex: 1;
+  position: relative;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+/* ============================================
+   Win Banner
+   ============================================ */
+
+.win-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.4s ease;
+  backdrop-filter: blur(4px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.win-banner {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 40px 48px;
+  text-align: center;
+  box-shadow: var(--shadow-xl);
+  animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  max-width: 420px;
+  width: 90%;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.win-banner__emoji {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  animation: bounce 0.6s ease infinite alternate;
+}
+
+@keyframes bounce {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-8px);
+  }
+}
+
+.win-banner__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.win-banner__subtitle {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.win-banner__stats {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.win-stat {
+  text-align: center;
+}
+
+.win-stat__value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.win-stat__label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+.win-banner__close {
+  padding: 12px 32px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-text-primary);
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.win-banner__close:hover {
+  background: #374151;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================
+   Loading
+   ============================================ */
+
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-text-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+/* ============================================
+   Responsive (mobil uyumluluk)
+   ============================================ */
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    min-width: auto;
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .app-main {
+    flex-direction: column;
+  }
+
+  .graph-container {
+    min-height: 50vh;
+  }
+}
