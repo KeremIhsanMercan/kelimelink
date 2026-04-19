@@ -13,6 +13,9 @@
   --color-text-primary: #1a1a1a;
   --color-text-secondary: #6b7280;
   --color-text-muted: #9ca3af;
+  --color-btn-primary: #1a1a1a;
+  --color-btn-primary-text: #ffffff;
+  --color-btn-primary-hover: #374151;
 
   /* Oyun renkleri */
   --color-word-a: #2563eb;
@@ -51,6 +54,12 @@
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 400ms ease;
+
+  /* Banner renkleri */
+  --color-banner-bg-start: var(--color-word-both-light);
+  --color-banner-bg-end: #f5f3ff;
+  --color-banner-border: #e0d7fa;
+  --color-banner-text: var(--color-word-both);
 }
 
 /* ============================================
@@ -213,8 +222,8 @@ body {
   padding: 10px 20px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-text-primary);
-  color: white;
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
   font-family: 'Inter', sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
@@ -224,7 +233,7 @@ body {
 }
 
 .guess-btn:hover {
-  background: #374151;
+  background: var(--color-btn-primary-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
@@ -372,6 +381,17 @@ body {
   white-space: nowrap;
 }
 
+.link-row__word--clickable {
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.link-row__word--clickable:hover {
+  color: var(--color-word-a);
+  text-decoration: underline;
+  transform: translateX(2px);
+}
+
 .link-row__dash {
   color: var(--color-text-muted);
   margin: 0 8px;
@@ -402,8 +422,8 @@ body {
 
 .selected-word-badge {
   padding: 4px 12px;
-  background: var(--color-text-primary);
-  color: white;
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
   border-radius: var(--radius-xl);
   font-size: 0.8rem;
   font-weight: 600;
@@ -533,8 +553,8 @@ body {
   padding: 12px 32px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-text-primary);
-  color: white;
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
   font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
@@ -543,7 +563,7 @@ body {
 }
 
 .win-banner__close:hover {
-  background: #374151;
+  background: var(--color-btn-primary-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
@@ -582,12 +602,26 @@ body {
 }
 
 /* ============================================
-   Profile Button in Header
+   Header Action Buttons (right side group)
    ============================================ */
 
-.app-header__profile-btn {
+.app-header__left-actions {
+  position: absolute;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-header__actions {
   position: absolute;
   right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-header__action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -601,7 +635,7 @@ body {
   transition: all var(--transition-fast);
 }
 
-.app-header__profile-btn:hover {
+.app-header__action-btn:hover {
   border-color: var(--color-word-a);
   color: var(--color-word-a);
   background: var(--color-word-a-bg);
@@ -609,8 +643,64 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-.app-header__profile-btn:active {
+.app-header__action-btn:active {
   transform: translateY(0);
+}
+
+.app-header__action-btn--active {
+  border-color: var(--color-word-both);
+  color: var(--color-word-both);
+  background: var(--color-word-both-light);
+}
+
+.app-header__action-btn--active:hover {
+  border-color: var(--color-word-both);
+  color: white;
+  background: var(--color-word-both);
+}
+
+.app-header__action-btn--new-game {
+  border-color: var(--color-success);
+  color: var(--color-success);
+  background: var(--color-success-light);
+}
+
+.app-header__action-btn--new-game:hover {
+  border-color: var(--color-success);
+  color: white;
+  background: var(--color-success);
+}
+
+/* ============================================
+   Practice Mode Banner
+   ============================================ */
+
+.practice-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, var(--color-banner-bg-start), var(--color-banner-bg-end));
+  border-bottom: 1px solid var(--color-banner-border);
+  color: var(--color-banner-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ============================================
@@ -692,9 +782,12 @@ body {
 /* Stats Grid */
 .profile-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 28px;
+}
+
+.profile-stats-grid--daily {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .profile-stat-card {
@@ -812,8 +905,8 @@ body {
   padding: 12px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--color-text-primary);
-  color: white;
+  background: var(--color-btn-primary);
+  color: var(--color-btn-primary-text);
   font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
@@ -822,7 +915,7 @@ body {
 }
 
 .profile-modal__close-btn:hover {
-  background: #374151;
+  background: var(--color-btn-primary-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
@@ -832,31 +925,215 @@ body {
 }
 
 /* ============================================
+   Profile Tabs
+   ============================================ */
+
+.profile-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 4px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+.profile-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.profile-tab:hover {
+  color: var(--color-text-secondary);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.profile-tab--active {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-tab--active:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+/* Practice stats grid — 2 columns */
+.profile-stats-grid--practice {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Practice distribution bar variant */
+.profile-dist-row__bar--practice {
+  background: linear-gradient(30deg, #0083cf, #ed4f00);
+}
+
+/* ============================================
+   Win Banner Actions
+   ============================================ */
+
+.win-banner__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.win-banner__new-game {
+  padding: 12px 28px;
+  border: 2px solid var(--color-success);
+  border-radius: var(--radius-md);
+  background: var(--color-success);
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.win-banner__new-game:hover {
+  background: #047857;
+  border-color: #047857;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.win-banner__new-game:active {
+  transform: translateY(0);
+}
+
+/* ============================================
    Responsive (mobil uyumluluk)
    ============================================ */
 
 @media (max-width: 768px) {
+  .app-header {
+    justify-content: flex-start;
+    padding: 0 12px;
+  }
+
+  .app-header__logo {
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+  }
+
+  .app-header__title {
+    font-size: 1.15rem;
+  }
+
+  .app-header__subtitle {
+    display: none;
+  }
+
   .sidebar {
     width: 100%;
     min-width: auto;
-    max-height: 40vh;
+    max-height: 45vh;
     border-right: none;
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .app-main {
+    border-bottom: none;
+    border-top: 1px solid var(--color-border);
+    display: flex;
     flex-direction: column;
   }
 
-  .graph-container {
-    min-height: 50vh;
+  .app-main {
+    flex-direction: column-reverse;
   }
 
-  .profile-stats-grid {
+  .graph-container {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .profile-stats-grid--daily {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-stats-grid--practice {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .profile-modal {
     padding: 28px 24px 24px;
   }
+
+  .app-header__left-actions {
+    gap: 4px;
+    left: 12px;
+  }
+
+  .app-header__actions {
+    position: static;
+    margin-left: auto;
+    gap: 6px;
+    right: auto;
+  }
+
+  .app-header__action-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .app-header__action-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .practice-banner {
+    font-size: 0.7rem;
+    padding: 5px 12px;
+  }
+
+  .win-banner__actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* ============================================
+   Dark Mode
+   ============================================ */
+
+html.dark {
+  --color-bg: #121212;
+  --color-surface: #1e1e1e;
+  --color-border: #333333;
+  --color-border-light: #2a2a2a;
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #a3a3a3;
+  --color-text-muted: #737373;
+  --color-btn-primary: #f5f5f5;
+  --color-btn-primary-text: #1a1a1a;
+  --color-btn-primary-hover: #d4d4d4;
+
+  --color-word-a-light: #1e3a8a;
+  --color-word-a-bg: #172554;
+  --color-word-b-light: #7f1d1d;
+  --color-word-b-bg: #450a0a;
+  --color-word-both-light: #4c1d95;
+  --color-word-neutral-light: #374151;
+  --color-gap-line: #404040;
+  --color-success-light: #064e3b;
+  --color-link-row-linked-bg: #064e3b;
+  --color-link-row-linked-hover-bg: #065f46;
+
+  --color-banner-bg-start: #2e1065;
+  --color-banner-bg-end: #1e1b4b;
+  --color-banner-border: #4c1d95;
+  --color-banner-text: #ddd6fe;
 }

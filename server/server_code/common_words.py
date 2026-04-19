@@ -163,11 +163,6 @@ COMMON_TURKISH_WORDS: list[str] = [
     "davul", "keman", "flüt", "konser", "sahne", "orkestra",
     "dans", "bale", "tablo", "sergi", "fotoğraf", "kamera",
     "film", "yönetmen", "oyuncu", "senaryo", "belgesel",
-    # Matematik ve sayılar
-    "sayı", "sıfır", "bir", "iki", "üç", "dört", "beş",
-    "altı", "yedi", "sekiz", "dokuz", "on", "yüz", "bin",
-    "milyon", "toplam", "fark", "çarpım", "bölüm", "oran",
-    "yüzde", "yarım", "çeyrek", "çift", "tek",
     # Diğer sık kullanılan kelimeler
     "hayat", "ölüm", "doğum", "düğün", "cenaze", "bayram",
     "festival", "kutlama", "hediye", "sürpriz", "davet", "misafir",

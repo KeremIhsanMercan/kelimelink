@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { fetchDailyPuzzle, submitGuess, fetchSimilarities, recordSolve, type SimilarityResult } from '../services/api';
+import { fetchDailyPuzzle, fetchPracticePuzzle, submitGuess, fetchSimilarities, recordSolve, type SimilarityResult } from '../services/api';
 import { useLocalStorage } from './useLocalStorage';
 
 /* ============================================
@@ -24,6 +24,7 @@ export interface GraphLink {
 }
 
 export type WinAnimationPhase = 'idle' | 'highlighting' | 'done';
+export type GameMode = 'daily' | 'practice';
 
 export interface GameState {
   isLoading: boolean;
@@ -109,8 +110,10 @@ function findShortestPath(
    ============================================ */
 
 export function useGameState() {
-  const { stats, loadGameState, saveGameState, recordWin } = useLocalStorage();
+  const { stats, practiceStats, loadGameState, saveGameState, recordWin, recordPracticeWin } = useLocalStorage();
   const hasRecordedWin = useRef(false);
+
+  const [gameMode, setGameMode] = useState<GameMode>('daily');
 
   const [state, setState] = useState<GameState>({
     isLoading: true,
@@ -170,131 +173,109 @@ export function useGameState() {
     return findShortestPath(state.wordA, state.wordB, adj);
   }, [state.links, state.wordA, state.wordB]);
 
-  /* ---------- Başlatma ---------- */
-  useEffect(() => {
-    async function init() {
-      try {
-        const puzzle = await fetchDailyPuzzle();
-        const saved = loadGameState(puzzle.date);
+  /* ---------- Günlük oyun başlatma ---------- */
+  const initDailyGame = useCallback(async () => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    allSimilaritiesRef.current = new Map();
+    hasRecordedWin.current = false;
 
-        if (saved && saved.isSolved) {
-          // Çözülmüş oyunu geri yükle — tüm kelimeler için benzerlik bilgisini yeniden oluştur
-          const nodes: GraphNode[] = [
-            { id: puzzle.word_a, word: puzzle.word_a, type: 'start_a', chainSide: 'a' },
-            { id: puzzle.word_b, word: puzzle.word_b, type: 'start_b', chainSide: 'b' },
-          ];
+    try {
+      const puzzle = await fetchDailyPuzzle();
+      const saved = loadGameState(puzzle.date);
 
-          const allWords = [puzzle.word_a, puzzle.word_b, ...saved.guessedWords];
-          const links: GraphLink[] = [];
+      if (saved && saved.isSolved) {
+        // Çözülmüş oyunu geri yükle — tüm kelimeler için benzerlik bilgisini yeniden oluştur
+        const nodes: GraphNode[] = [
+          { id: puzzle.word_a, word: puzzle.word_a, type: 'start_a', chainSide: 'a' },
+          { id: puzzle.word_b, word: puzzle.word_b, type: 'start_b', chainSide: 'b' },
+        ];
 
-          // Her tahmin edilen kelime için benzerlik skorlarını yeniden hesapla
-          for (const guessedWord of saved.guessedWords) {
-            nodes.push({ id: guessedWord, word: guessedWord, type: 'guessed', chainSide: 'none' });
-            
-            // O kelimeden önceki tüm kelimelerle benzerliği hesapla
-            const boardBefore = allWords.filter(w => w !== guessedWord);
-            try {
-              const result = await submitGuess(guessedWord, boardBefore);
-              allSimilaritiesRef.current.set(guessedWord, result.similarities);
-              for (const link of result.links) {
-                links.push({
-                  source: link.word1,
-                  target: link.word2,
-                  similarity: link.similarity,
-                });
-              }
-            } catch {
-              // Benzerlik hesaplanamadı, devam et
+        const allWords = [puzzle.word_a, puzzle.word_b, ...saved.guessedWords];
+        const links: GraphLink[] = [];
+
+        // Her tahmin edilen kelime için benzerlik skorlarını yeniden hesapla
+        for (const guessedWord of saved.guessedWords) {
+          nodes.push({ id: guessedWord, word: guessedWord, type: 'guessed', chainSide: 'none' });
+
+          // O kelimeden önceki tüm kelimelerle benzerliği hesapla
+          const boardBefore = allWords.filter(w => w !== guessedWord);
+          try {
+            const result = await submitGuess(guessedWord, boardBefore);
+            allSimilaritiesRef.current.set(guessedWord, result.similarities);
+            for (const link of result.links) {
+              links.push({
+                source: link.word1,
+                target: link.word2,
+                similarity: link.similarity,
+              });
             }
+          } catch {
+            // Benzerlik hesaplanamadı, devam et
           }
-
-          const updatedNodes = updateChainSides(nodes, links, puzzle.word_a, puzzle.word_b);
-          hasRecordedWin.current = true;
-
-          setState({
-            isLoading: false,
-            error: null,
-            puzzleDate: puzzle.date,
-            wordA: puzzle.word_a,
-            wordB: puzzle.word_b,
-            nodes: updatedNodes,
-            links,
-            guessCount: saved.guessCount,
-            isSolved: true,
-            showWinBanner: false,
-            selectedNode: null,
-            selectedNodeSimilarities: [],
-            isGuessing: false,
-            winAnimationPhase: 'idle',
-            winShortestPath: null,
-            preWinChainSides: null,
-          });
-          return;
         }
 
-        if (saved) {
-          // Devam eden oyunu geri yükle
-          const nodes: GraphNode[] = [
-            { id: puzzle.word_a, word: puzzle.word_a, type: 'start_a', chainSide: 'a' },
-            { id: puzzle.word_b, word: puzzle.word_b, type: 'start_b', chainSide: 'b' },
-          ];
-          const allWords = [puzzle.word_a, puzzle.word_b, ...saved.guessedWords];
-          const links: GraphLink[] = [];
+        const updatedNodes = updateChainSides(nodes, links, puzzle.word_a, puzzle.word_b);
+        hasRecordedWin.current = true;
 
-          for (const guessedWord of saved.guessedWords) {
-            nodes.push({ id: guessedWord, word: guessedWord, type: 'guessed', chainSide: 'none' });
-            const boardBefore = allWords.filter(w => w !== guessedWord);
-            try {
-              const result = await submitGuess(guessedWord, boardBefore);
-              allSimilaritiesRef.current.set(guessedWord, result.similarities);
-              for (const link of result.links) {
-                links.push({
-                  source: link.word1,
-                  target: link.word2,
-                  similarity: link.similarity,
-                });
-              }
-            } catch {
-              // devam et
-            }
-          }
-
-          const updatedNodes = updateChainSides(nodes, links, puzzle.word_a, puzzle.word_b);
-
-          setState({
-            isLoading: false,
-            error: null,
-            puzzleDate: puzzle.date,
-            wordA: puzzle.word_a,
-            wordB: puzzle.word_b,
-            nodes: updatedNodes,
-            links,
-            guessCount: saved.guessCount,
-            isSolved: false,
-            showWinBanner: false,
-            selectedNode: null,
-            selectedNodeSimilarities: [],
-            isGuessing: false,
-            winAnimationPhase: 'idle',
-            winShortestPath: null,
-            preWinChainSides: null,
-          });
-          return;
-        }
-
-        // Yeni oyun
         setState({
           isLoading: false,
           error: null,
           puzzleDate: puzzle.date,
           wordA: puzzle.word_a,
           wordB: puzzle.word_b,
-          nodes: [
-            { id: puzzle.word_a, word: puzzle.word_a, type: 'start_a', chainSide: 'a' },
-            { id: puzzle.word_b, word: puzzle.word_b, type: 'start_b', chainSide: 'b' },
-          ],
-          links: [],
-          guessCount: 0,
+          nodes: updatedNodes,
+          links,
+          guessCount: saved.guessCount,
+          isSolved: true,
+          showWinBanner: false,
+          selectedNode: null,
+          selectedNodeSimilarities: [],
+          isGuessing: false,
+          winAnimationPhase: 'idle',
+          winShortestPath: null,
+          preWinChainSides: null,
+        });
+        return;
+      }
+
+      if (saved) {
+        // Devam eden oyunu geri yükle
+        const nodes: GraphNode[] = [
+          { id: puzzle.word_a, word: puzzle.word_a, type: 'start_a', chainSide: 'a' },
+          { id: puzzle.word_b, word: puzzle.word_b, type: 'start_b', chainSide: 'b' },
+        ];
+        const allWords = [puzzle.word_a, puzzle.word_b, ...saved.guessedWords];
+        const links: GraphLink[] = [];
+
+        for (const guessedWord of saved.guessedWords) {
+          nodes.push({ id: guessedWord, word: guessedWord, type: 'guessed', chainSide: 'none' });
+          const boardBefore = allWords.filter(w => w !== guessedWord);
+          try {
+            const result = await submitGuess(guessedWord, boardBefore);
+            allSimilaritiesRef.current.set(guessedWord, result.similarities);
+            for (const link of result.links) {
+              links.push({
+                source: link.word1,
+                target: link.word2,
+                similarity: link.similarity,
+              });
+            }
+          } catch {
+            // devam et
+          }
+        }
+
+        const updatedNodes = updateChainSides(nodes, links, puzzle.word_a, puzzle.word_b);
+
+        setState({
+          isLoading: false,
+          error: null,
+          puzzleDate: puzzle.date,
+          wordA: puzzle.word_a,
+          wordB: puzzle.word_b,
+          nodes: updatedNodes,
+          links,
+          guessCount: saved.guessCount,
           isSolved: false,
           showWinBanner: false,
           selectedNode: null,
@@ -304,16 +285,95 @@ export function useGameState() {
           winShortestPath: null,
           preWinChainSides: null,
         });
-      } catch {
-        setState((prev) => ({
-          ...prev,
-          isLoading: false,
-          error: 'Sunucuya bağlanılamadı. Lütfen sunucunun çalıştığından emin olun.',
-        }));
+        return;
       }
+
+      // Yeni oyun
+      setState({
+        isLoading: false,
+        error: null,
+        puzzleDate: puzzle.date,
+        wordA: puzzle.word_a,
+        wordB: puzzle.word_b,
+        nodes: [
+          { id: puzzle.word_a, word: puzzle.word_a, type: 'start_a', chainSide: 'a' },
+          { id: puzzle.word_b, word: puzzle.word_b, type: 'start_b', chainSide: 'b' },
+        ],
+        links: [],
+        guessCount: 0,
+        isSolved: false,
+        showWinBanner: false,
+        selectedNode: null,
+        selectedNodeSimilarities: [],
+        isGuessing: false,
+        winAnimationPhase: 'idle',
+        winShortestPath: null,
+        preWinChainSides: null,
+      });
+    } catch {
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: 'Sunucuya bağlanılamadı. Lütfen sunucunun çalıştığından emin olun.',
+      }));
     }
-    init();
   }, [loadGameState, updateChainSides]);
+
+  /* ---------- Pratik oyun başlatma ---------- */
+  const initPracticeGame = useCallback(async () => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    allSimilaritiesRef.current = new Map();
+    hasRecordedWin.current = false;
+
+    try {
+      const puzzle = await fetchPracticePuzzle();
+
+      setState({
+        isLoading: false,
+        error: null,
+        puzzleDate: '', // Pratik modda tarih yok
+        wordA: puzzle.word_a,
+        wordB: puzzle.word_b,
+        nodes: [
+          { id: puzzle.word_a, word: puzzle.word_a, type: 'start_a', chainSide: 'a' },
+          { id: puzzle.word_b, word: puzzle.word_b, type: 'start_b', chainSide: 'b' },
+        ],
+        links: [],
+        guessCount: 0,
+        isSolved: false,
+        showWinBanner: false,
+        selectedNode: null,
+        selectedNodeSimilarities: [],
+        isGuessing: false,
+        winAnimationPhase: 'idle',
+        winShortestPath: null,
+        preWinChainSides: null,
+      });
+    } catch {
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: 'Sunucuya bağlanılamadı. Lütfen sunucunun çalıştığından emin olun.',
+      }));
+    }
+  }, []);
+
+  /* ---------- İlk yükleme: günlük oyun ---------- */
+  useEffect(() => {
+    initDailyGame();
+  }, [initDailyGame]);
+
+  /* ---------- Mod değiştirme ---------- */
+  const switchToDaily = useCallback(async () => {
+    if (gameMode === 'daily') return;
+    setGameMode('daily');
+    await initDailyGame();
+  }, [gameMode, initDailyGame]);
+
+  const switchToPractice = useCallback(async () => {
+    setGameMode('practice');
+    await initPracticeGame();
+  }, [initPracticeGame]);
 
   /* ---------- Kelime tahmin et ---------- */
   const addWord = useCallback(
@@ -321,9 +381,9 @@ export function useGameState() {
       const w = word.trim().toLowerCase();
       if (!w || state.isSolved) return;
 
-      // En az 3 karakter kontrolü
-      if (w.length < 3) {
-        setState((prev) => ({ ...prev, error: 'Kelime en az 3 harf içermelidir.' }));
+      // En az 2 karakter kontrolü
+      if (w.length < 2) {
+        setState((prev) => ({ ...prev, error: 'Kelime en az 2 harf içermelidir.' }));
         return;
       }
 
@@ -380,24 +440,32 @@ export function useGameState() {
           // Kazanma kontrolü
           const won = checkWin(newLinks, prev.wordA, prev.wordB);
 
-          // Oyun durumunu kaydet
-          const guessedWords = updatedNodes
-            .filter((n) => n.type === 'guessed')
-            .map((n) => n.word);
+          // Günlük modda oyun durumunu kaydet; pratik modda kaydetme
+          if (gameMode === 'daily') {
+            const guessedWords = updatedNodes
+              .filter((n) => n.type === 'guessed')
+              .map((n) => n.word);
 
-          saveGameState({
-            date: prev.puzzleDate,
-            wordA: prev.wordA,
-            wordB: prev.wordB,
-            guessedWords,
-            guessCount: newGuessCount,
-            isSolved: won,
-          });
+            saveGameState({
+              date: prev.puzzleDate,
+              wordA: prev.wordA,
+              wordB: prev.wordB,
+              guessedWords,
+              guessCount: newGuessCount,
+              isSolved: won,
+            });
+          }
 
           if (won && !hasRecordedWin.current) {
             hasRecordedWin.current = true;
-            recordWin(prev.puzzleDate, newGuessCount);
-            recordSolve(newGuessCount).catch(() => {});
+            if (gameMode === 'daily') {
+              recordWin(prev.puzzleDate, newGuessCount);
+              recordSolve(newGuessCount).catch(() => { });
+            } else {
+              recordPracticeWin(newGuessCount);
+              // Pratik modda da global stats'a (sabit 2003-05-26 tarihine) kaydediyoruz
+              recordSolve(newGuessCount, true).catch(() => { });
+            }
           }
 
           // If won, compute shortest path and preserve pre-win chain sides for animation
@@ -441,7 +509,7 @@ export function useGameState() {
         setState((prev) => ({ ...prev, isGuessing: false, error: message }));
       }
     },
-    [state.nodes, state.isSolved, updateChainSides, checkWin, saveGameState, recordWin]
+    [state.nodes, state.isSolved, updateChainSides, checkWin, saveGameState, recordWin, recordPracticeWin, gameMode]
   );
 
   /* ---------- Düğüm seçimi ---------- */
@@ -500,11 +568,15 @@ export function useGameState() {
 
   return {
     ...state,
+    gameMode,
     stats,
+    practiceStats,
     addWord,
     selectNode,
     closeWinBanner,
     getShortestPath,
     finishWinAnimation,
+    switchToDaily,
+    switchToPractice,
   };
 }

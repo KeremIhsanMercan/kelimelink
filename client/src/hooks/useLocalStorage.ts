@@ -25,8 +25,16 @@ export interface PlayerStats {
   guessDistribution: Record<number, number>; // guessCount -> # of times
 }
 
+// Pratik istatistik tipi (seri takibi yok)
+export interface PracticeStats {
+  gamesPlayed: number;
+  gamesWon: number;
+  guessDistribution: Record<number, number>;
+}
+
 const GAME_STATE_KEY = 'kelimelink-game-state';
 const STATS_KEY = 'kelimelink-stats';
+const PRACTICE_STATS_KEY = 'kelimelink-practice-stats';
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -57,15 +65,29 @@ const DEFAULT_STATS: PlayerStats = {
   guessDistribution: {},
 };
 
+const DEFAULT_PRACTICE_STATS: PracticeStats = {
+  gamesPlayed: 0,
+  gamesWon: 0,
+  guessDistribution: {},
+};
+
 export function useLocalStorage() {
   const [stats, setStats] = useState<PlayerStats>(() =>
     loadFromStorage(STATS_KEY, DEFAULT_STATS)
+  );
+
+  const [practiceStats, setPracticeStats] = useState<PracticeStats>(() =>
+    loadFromStorage(PRACTICE_STATS_KEY, DEFAULT_PRACTICE_STATS)
   );
 
   // İstatistikleri güncelle
   useEffect(() => {
     saveToStorage(STATS_KEY, stats);
   }, [stats]);
+
+  useEffect(() => {
+    saveToStorage(PRACTICE_STATS_KEY, practiceStats);
+  }, [practiceStats]);
 
   /**
    * Bugünün kayıtlı oyun durumunu yükler.
@@ -109,11 +131,29 @@ export function useLocalStorage() {
     });
   }, []);
 
+  /**
+   * Pratik modu kazanıldığında istatistikleri günceller.
+   * Günlük istatistikleri etkilemez.
+   */
+  const recordPracticeWin = useCallback((guessCount: number): void => {
+    setPracticeStats((prev) => {
+      const newDist = { ...(prev.guessDistribution || {}) };
+      newDist[guessCount] = (newDist[guessCount] || 0) + 1;
+      return {
+        gamesPlayed: prev.gamesPlayed + 1,
+        gamesWon: prev.gamesWon + 1,
+        guessDistribution: newDist,
+      };
+    });
+  }, []);
+
   return {
     stats,
+    practiceStats,
     loadGameState,
     saveGameState,
     recordWin,
+    recordPracticeWin,
   };
 }
 

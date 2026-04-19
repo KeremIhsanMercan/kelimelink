@@ -1,12 +1,18 @@
-import type { PlayerStats } from '../hooks/useLocalStorage';
+import type { PlayerStats, PracticeStats } from '../hooks/useLocalStorage';
+import type { GameMode } from '../hooks/useGameState';
 
 interface WinBannerProps {
   guessCount: number;
-  stats: PlayerStats;
+  stats?: PlayerStats;
+  practiceStats?: PracticeStats;
+  gameMode: GameMode;
   onClose: () => void;
+  onNewPractice?: () => void;
 }
 
-export default function WinBanner({ guessCount, stats, onClose }: WinBannerProps) {
+export default function WinBanner({ guessCount, stats, practiceStats, gameMode, onClose, onNewPractice }: WinBannerProps) {
+  const isPractice = gameMode === 'practice';
+
   return (
     <div className="win-overlay" onClick={onClose}>
       <div className="win-banner" onClick={(e) => e.stopPropagation()}>
@@ -17,22 +23,51 @@ export default function WinBanner({ guessCount, stats, onClose }: WinBannerProps
           bağladınız!
         </p>
         <div className="win-banner__stats">
-          <div className="win-stat">
-            <div className="win-stat__value">{stats.gamesWon}</div>
-            <div className="win-stat__label">Kazanılan</div>
-          </div>
-          <div className="win-stat">
-            <div className="win-stat__value">{stats.currentStreak}</div>
-            <div className="win-stat__label">Seri</div>
-          </div>
-          <div className="win-stat">
-            <div className="win-stat__value">{stats.maxStreak}</div>
-            <div className="win-stat__label">En İyi Seri</div>
-          </div>
+          {isPractice && practiceStats ? (
+            <>
+              <div className="win-stat">
+                <div className="win-stat__value">{practiceStats.gamesWon}</div>
+                <div className="win-stat__label">Pratik Kazanılan</div>
+              </div>
+              <div className="win-stat">
+                <div className="win-stat__value">
+                  {practiceStats.gamesWon > 0
+                    ? (Object.entries(practiceStats.guessDistribution).reduce(
+                        (acc, [guess, count]) => acc + parseInt(guess) * count,
+                        0
+                      ) / practiceStats.gamesWon).toFixed(1)
+                    : 0}
+                </div>
+                <div className="win-stat__label">Ortalama Tahmin</div>
+              </div>
+            </>
+          ) : stats ? (
+            <>
+              <div className="win-stat">
+                <div className="win-stat__value">{stats.gamesWon}</div>
+                <div className="win-stat__label">Kazanılan</div>
+              </div>
+              <div className="win-stat">
+                <div className="win-stat__value">{stats.currentStreak}</div>
+                <div className="win-stat__label">Seri</div>
+              </div>
+              <div className="win-stat">
+                <div className="win-stat__value">{stats.maxStreak}</div>
+                <div className="win-stat__label">En İyi Seri</div>
+              </div>
+            </>
+          ) : null}
         </div>
-        <button className="win-banner__close" onClick={onClose}>
-          Kapat
-        </button>
+        <div className="win-banner__actions">
+          {isPractice && onNewPractice && (
+            <button className="win-banner__new-game" onClick={onNewPractice}>
+              Yeni Pratik Oyun
+            </button>
+          )}
+          <button className="win-banner__close" onClick={onClose}>
+            Kapat
+          </button>
+        </div>
       </div>
     </div>
   );

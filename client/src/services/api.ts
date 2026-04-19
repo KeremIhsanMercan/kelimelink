@@ -40,6 +40,16 @@ export async function fetchDailyPuzzle(): Promise<DailyPuzzle> {
   return res.data;
 }
 
+export interface PracticePuzzle {
+  word_a: string;
+  word_b: string;
+}
+
+export async function fetchPracticePuzzle(): Promise<PracticePuzzle> {
+  const res = await api.get<PracticePuzzle>('/api/practice-puzzle');
+  return res.data;
+}
+
 export async function submitGuess(word: string, boardWords: string[]): Promise<GuessResponse> {
   const res = await api.post<GuessResponse>('/api/guess', {
     word,
@@ -56,8 +66,8 @@ export async function fetchSimilarities(word: string, boardWords: string[]): Pro
   return res.data;
 }
 
-export async function recordSolve(guessCount: number): Promise<void> {
-  await api.post('/api/solve', { guess_count: guessCount });
+export async function recordSolve(guessCount: number, isPractice: boolean = false): Promise<void> {
+  await api.post('/api/solve', { guess_count: guessCount, is_practice: isPractice });
 }
 
 export async function fetchStats(): Promise<GlobalStats> {

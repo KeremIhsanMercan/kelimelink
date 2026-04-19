@@ -76,7 +76,7 @@ def get_all_similarities(
             "word1": word,
             "word2": board_word,
             "similarity": sim,
-            "is_link": sim > 33,
+            "is_link": sim >= 27.5,
         })
 
     results.sort(key=lambda x: x["similarity"], reverse=True)
@@ -109,6 +109,38 @@ def pick_daily_pair(
             return (word_a, word_b)
 
     # 500 denemede bulunamazsa, en düşük benzerliğe sahip çifti seç
+    best_pair = (available[0], available[1])
+    best_sim = 100.0
+    for _ in range(200):
+        word_a, word_b = rng.sample(available, 2)
+        sim = cosine_similarity(vectors[word_a], vectors[word_b])
+        if sim < best_sim:
+            best_sim = sim
+            best_pair = (word_a, word_b)
+
+    return best_pair
+
+
+def pick_practice_pair(
+    vectors: dict[str, np.ndarray],
+) -> tuple[str, str]:
+    """
+    Pratik modu için rastgele bir çift seçer.
+    Her çağrıda farklı bir çift döndürür (seed yok).
+    """
+    available = [w for w in COMMON_TURKISH_WORDS if w in vectors]
+
+    if len(available) < 2:
+        available = list(vectors.keys())
+
+    rng = random.Random()  # Seed yok → her seferinde farklı
+
+    for _ in range(500):
+        word_a, word_b = rng.sample(available, 2)
+        sim = cosine_similarity(vectors[word_a], vectors[word_b])
+        if sim < 5:
+            return (word_a, word_b)
+
     best_pair = (available[0], available[1])
     best_sim = 100.0
     for _ in range(200):

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react';
 import type { SimilarityResult } from '../services/api';
+import type { GameMode } from '../hooks/useGameState';
 
 interface SidebarProps {
   wordA: string;
@@ -12,6 +13,8 @@ interface SidebarProps {
   selectedNode: string | null;
   selectedNodeSimilarities: SimilarityResult[];
   onAddWord: (word: string) => void;
+  onSelectNode: (word: string) => void;
+  gameMode: GameMode;
 }
 
 export default function Sidebar({
@@ -24,6 +27,8 @@ export default function Sidebar({
   selectedNode,
   selectedNodeSimilarities,
   onAddWord,
+  onSelectNode,
+  gameMode,
 }: SidebarProps) {
   const [inputValue, setInputValue] = useState('');
   const [localWarning, setLocalWarning] = useState<string | null>(null);
@@ -42,16 +47,16 @@ export default function Sidebar({
       const now = new Date();
       const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
       const diff = tomorrow.getTime() - now.getTime();
-      
+
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      
+
       setTimeLeft(
         `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
       );
     };
-    
+
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
@@ -68,9 +73,9 @@ export default function Sidebar({
     const trimmed = inputValue.trim();
     if (!trimmed || isGuessing || isSolved) return;
 
-    // En az 3 karakter kontrolü
-    if (trimmed.length < 3) {
-      setLocalWarning('Kelime en az 3 harf içermelidir.');
+    // En az 2 karakter kontrolü
+    if (trimmed.length < 2) {
+      setLocalWarning('Kelime en az 2 harf içermelidir.');
       return;
     }
 
@@ -95,15 +100,17 @@ export default function Sidebar({
     <aside className="sidebar">
       {/* Başlangıç Kelimeleri */}
       <div className="sidebar__section">
-        <div className="sidebar__label">Günlük Bulmaca</div>
+        <div className="sidebar__label">{gameMode === 'practice' ? 'Pratik Bulmaca' : 'Günlük Bulmaca'}</div>
         <div className="starting-words">
           <span className="starting-word starting-word--a">{wordA}</span>
           <span className="starting-words__arrow">⟷</span>
           <span className="starting-word starting-word--b">{wordB}</span>
         </div>
-        <p className="links-info" style={{ marginTop: '12px', marginBottom: 0 }}>
-          Sonraki bulmacaya: {timeLeft}
-        </p>
+        {gameMode === 'daily' && (
+          <p className="links-info" style={{ marginTop: '12px', marginBottom: 0 }}>
+            Sonraki bulmacaya: {timeLeft}
+          </p>
+        )}
       </div>
 
       {/* Kelime Ekleme */}
@@ -163,7 +170,7 @@ export default function Sidebar({
               <span className="selected-word-badge">{selectedNode}</span>
             </div>
             <p className="links-info">
-              İki kelime arasındaki benzerlik %33'i geçerse bağlantı oluşur.
+              İki kelime arasındaki benzerlik %27.5'in üzerinde ise bağlantı oluşur.
             </p>
             <div className="links-table" ref={scrollRef}>
               {selectedNodeSimilarities.length > 0 ? (
@@ -177,7 +184,13 @@ export default function Sidebar({
                     >
                       <span className="link-row__word">{selectedNode}</span>
                       <span className="link-row__dash">—</span>
-                      <span className="link-row__word">{otherWord}</span>
+                      <span
+                        className="link-row__word link-row__word--clickable"
+                        onClick={() => onSelectNode(otherWord)}
+                        title={`${otherWord} için benzerlikleri göster`}
+                      >
+                        {otherWord}
+                      </span>
                       <span className="link-row__score">
                         %{sim.similarity.toFixed(1)}
                       </span>

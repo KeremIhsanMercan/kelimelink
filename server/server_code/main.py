@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from nlp_engine import load_vectors, cosine_similarity, get_all_similarities, pick_daily_pair
+from nlp_engine import load_vectors, cosine_similarity, get_all_similarities, pick_daily_pair, pick_practice_pair
 from database import init_tables, get_daily_puzzle, save_daily_puzzle, record_solve, get_today_stats
 
 load_dotenv()
@@ -24,7 +24,7 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 word_vectors: dict = {}
 
-SIMILARITY_THRESHOLD = int(os.getenv("SIMILARITY_THRESHOLD", "33"))
+SIMILARITY_THRESHOLD = int(os.getenv("SIMILARITY_THRESHOLD", "27.5"))
 CSV_PATH = os.getenv("CSV_PATH", "../semantics_dataset/numberbatch_temiz.csv")
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 
@@ -76,6 +76,7 @@ class GuessRequest(BaseModel):
 
 class SolveRequest(BaseModel):
     guess_count: int
+    is_practice: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +121,19 @@ async def daily_puzzle():
     }
 
 
+@app.get("/api/practice-puzzle")
+async def practice_puzzle():
+    """
+    Pratik modu için rastgele bir bulmaca döndürür.
+    Her istek yeni bir çift oluşturur. DB'ye kaydedilmez.
+    """
+    word_a, word_b = pick_practice_pair(word_vectors)
+    return {
+        "word_a": word_a,
+        "word_b": word_b,
+    }
+
+
 @app.post("/api/guess")
 async def guess(req: GuessRequest):
     """
@@ -158,10 +172,10 @@ async def guess(req: GuessRequest):
 
 @app.post("/api/solve")
 async def solve(req: SolveRequest):
-    """Anonim çözüm kaydeder."""
-    today = date.today()
+    """Anonim çözüm kaydeder. Pratik mod ise sabit tarihe (2003-05-26) kaydeder."""
+    target_date = date(2003, 5, 26) if req.is_practice else date.today()
     try:
-        record_solve(today, req.guess_count)
+        record_solve(target_date, req.guess_count)
     except Exception as e:
         print(f"[Sunucu] Çözüm kaydetme hatası: {e}")
         raise HTTPException(status_code=500, detail="İstatistik kaydedilemedi.")

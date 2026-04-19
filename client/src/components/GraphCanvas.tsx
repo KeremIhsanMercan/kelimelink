@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d';
-import { forceCollide } from 'd3-force';
+import { forceCollide, forceManyBody } from 'd3-force';
 import type { GraphNode, GraphLink, WinAnimationPhase } from '../hooks/useGameState';
 
 interface GraphCanvasProps {
@@ -69,6 +69,17 @@ function getAnimatedNodeColor(
 const MIN_LINK_DISTANCE = 100;
 const MIN_ZOOM = 0.8;
 const STEP_DELAY_MS = 700; // delay between each path step
+
+function getDynamicBounds(w: number, h: number, nodeCount: number) {
+  if (w === 0 || h === 0) return { boundX: 0, boundY: 0, minZoom: MIN_ZOOM };
+  const baseBoundX = (w / MIN_ZOOM) / 2;
+  const baseBoundY = (h / MIN_ZOOM) / 2;
+  const expansion = Math.max(1, Math.sqrt(nodeCount / 15));
+  const boundX = Math.max(baseBoundX, 500) * expansion;
+  const boundY = Math.max(baseBoundY, 500) * expansion;
+  const minZoom = Math.max(0.15, MIN_ZOOM / expansion);
+  return { boundX, boundY, minZoom };
+}
 
 /* Düğüm boyutu (kelime uzunluğuna göre) */
 function getNodeHalfWidth(word: string) {
@@ -245,7 +256,7 @@ export default function GraphCanvas({
     if (!fg) return;
 
     fg.d3Force('link')?.distance(() => MIN_LINK_DISTANCE);
-    fg.d3Force('charge', null);
+    fg.d3Force('charge', forceManyBody().strength(-150).distanceMax(150));
     fg.d3Force('center', null);
 
     // Çarpışma: düğümler üst üste binmez
@@ -255,15 +266,14 @@ export default function GraphCanvas({
       ).strength(0.9).iterations(4)
     );
 
-    // Dinamik sınır kutusu (minZoom referans alınarak)
-    const boundX = (dimensions.width / MIN_ZOOM) / 2;
-    const boundY = (dimensions.height / MIN_ZOOM) / 2;
+    // Dinamik sınır kutusu
+    const { boundX, boundY } = getDynamicBounds(dimensions.width, dimensions.height, nodes.length);
 
     // Sınır kutusu
     fg.d3Force('box', forceBoundingBox(boundX, boundY));
 
     fg.d3ReheatSimulation();
-  }, [dimensions]);
+  }, [dimensions, nodes.length]);
 
   // Grafik verisi değiştiğinde (yeni kelime, vs.) kuvvetleri yeniden uygula
   useEffect(() => { applyForces(); }, [graphData, applyForces]);
@@ -339,8 +349,7 @@ export default function GraphCanvas({
     const h = dimensions.height;
     if (w === 0 || h === 0) return;
 
-    const boundX = (w / MIN_ZOOM) / 2;
-    const boundY = (h / MIN_ZOOM) / 2;
+    const { boundX, boundY } = getDynamicBounds(w, h, nodes.length);
 
     ctx.save();
     ctx.strokeStyle = '#000000';
@@ -348,7 +357,7 @@ export default function GraphCanvas({
     ctx.setLineDash([]);
     ctx.strokeRect(-boundX, -boundY, boundX * 2, boundY * 2);
     ctx.restore();
-  }, [dimensions]);
+  }, [dimensions, nodes.length]);
 
   /* ---- Kenar çizimi ---- */
   const paintLink = useCallback((
@@ -427,11 +436,10 @@ export default function GraphCanvas({
 
     // Sürüklenen düğümü dinamik sınır içinde tut
     const hw = getNodeHalfWidth(node.word);
-    const boundX = (dimensions.width / MIN_ZOOM) / 2;
-    const boundY = (dimensions.height / MIN_ZOOM) / 2;
+    const { boundX, boundY } = getDynamicBounds(dimensions.width, dimensions.height, nodes.length);
     node.fx = Math.max(-boundX + hw, Math.min(boundX - hw, node.x));
     node.fy = Math.max(-boundY + 15, Math.min(boundY - 15, node.y));
-  }, [dimensions]);
+  }, [dimensions, nodes.length]);
 
   /* ---- Sürükleme bitti: başlangıç kelimelerini serbest bırakma, diğerlerini de ---- */
   const handleNodeDragEnd = useCallback((
@@ -468,8 +476,7 @@ export default function GraphCanvas({
     let cx = x;
     let cy = y;
 
-    const boundX = (w / MIN_ZOOM) / 2;
-    const boundY = (h / MIN_ZOOM) / 2;
+    const { boundX, boundY } = getDynamicBounds(w, h, nodes.length);
 
     const maxCx = Math.max(0, boundX - (w / k) / 2);
     const maxCy = Math.max(0, boundY - (h / k) / 2);
@@ -489,9 +496,10 @@ export default function GraphCanvas({
       (fg as any).centerAt?.(cx, cy, 400); // 400ms animasyon ile yumuşakça sınıra geri çek
       setTimeout(() => { isFixingPan.current = false; }, 450); // Animasyon bitiminde kilidi aç
     }
-  }, [dimensions]);
+  }, [dimensions, nodes.length]);
 
   const ready = dimensions.width > 0 && dimensions.height > 0;
+  const { minZoom } = getDynamicBounds(dimensions.width, dimensions.height, nodes.length);
 
   return (
     <div className="graph-container" ref={containerRef}>
@@ -512,13 +520,13 @@ export default function GraphCanvas({
           width={dimensions.width}
           height={dimensions.height}
           backgroundColor="transparent"
-          d3AlphaDecay={0.02}
-          d3VelocityDecay={0.45}
+          d3AlphaDecay={0.03}
+          d3VelocityDecay={0.55}
           cooldownTicks={150}
           enableNodeDrag={true}
           enableZoomInteraction={true}
           enablePanInteraction={true}
-          minZoom={MIN_ZOOM}
+          minZoom={minZoom}
           maxZoom={2}
         />
       )}
