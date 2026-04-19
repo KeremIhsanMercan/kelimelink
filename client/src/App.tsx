@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useGameState } from './hooks/useGameState';
 import GraphCanvas from './components/GraphCanvas';
 import Sidebar from './components/Sidebar';
 import WinBanner from './components/WinBanner';
+import ProfileModal from './components/ProfileModal';
 import './index.css';
 
 export default function App() {
@@ -23,7 +25,13 @@ export default function App() {
     selectNode,
     closeWinBanner,
     getShortestPath,
+    winAnimationPhase,
+    winShortestPath,
+    preWinChainSides,
+    finishWinAnimation,
   } = useGameState();
+
+  const [showProfile, setShowProfile] = useState(false);
 
   if (isLoading) {
     return (
@@ -46,12 +54,30 @@ export default function App() {
 
   const shortestPath = isSolved ? getShortestPath() : null;
 
+  // Disable input during the win animation highlighting phase
+  const inputDisabled = winAnimationPhase === 'highlighting';
+
   return (
     <div className="app-layout">
       {/* Üst Başlık */}
       <header className="app-header">
-        <h1 className="app-header__title">Kelimelink</h1>
+        <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
+        <h1 className="app-header__title">KelimeLink</h1>
         <span className="app-header__subtitle">Kelime Bağlantı Bulmacası</span>
+        <button
+          className="app-header__profile-btn"
+          onClick={() => setShowProfile(true)}
+          aria-label="Profil ve İstatistikler"
+          title="İstatistikler"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3v18h18" />
+            <path d="M7 17V13" />
+            <path d="M11 17V9" />
+            <path d="M15 17V5" />
+            <path d="M19 17V11" />
+          </svg>
+        </button>
       </header>
 
       {/* Ana İçerik */}
@@ -61,7 +87,7 @@ export default function App() {
           wordB={wordB}
           nodeCount={nodes.length}
           guessCount={guessCount}
-          isSolved={isSolved}
+          isSolved={isSolved || inputDisabled}
           isGuessing={isGuessing}
           error={error}
           selectedNode={selectedNode}
@@ -75,6 +101,10 @@ export default function App() {
           shortestPath={shortestPath}
           selectedNode={selectedNode}
           onNodeClick={selectNode}
+          winAnimationPhase={winAnimationPhase}
+          winShortestPath={winShortestPath}
+          preWinChainSides={preWinChainSides}
+          onWinAnimationFinish={finishWinAnimation}
         />
       </main>
 
@@ -84,6 +114,14 @@ export default function App() {
           guessCount={guessCount}
           stats={stats}
           onClose={closeWinBanner}
+        />
+      )}
+
+      {/* Profil/İstatistik Modal */}
+      {showProfile && (
+        <ProfileModal
+          stats={stats}
+          onClose={() => setShowProfile(false)}
         />
       )}
     </div>

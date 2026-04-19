@@ -76,7 +76,7 @@ def get_all_similarities(
             "word1": word,
             "word2": board_word,
             "similarity": sim,
-            "is_link": sim > 24,
+            "is_link": sim > 33,
         })
 
     results.sort(key=lambda x: x["similarity"], reverse=True)
@@ -90,7 +90,7 @@ def pick_daily_pair(
     """
     Günlük bulmaca için iki uzak kelime seçer.
     COMMON_TURKISH_WORDS listesinden, vektörleri mevcut olan kelimelerden
-    kosinüs benzerliği %10'un altında olan rastgele bir çift seçer.
+    kosinüs benzerliği %5'in altında olan rastgele bir çift seçer.
     """
     # Vektörleri mevcut olan yaygın kelimeleri filtrele
     available = [w for w in COMMON_TURKISH_WORDS if w in vectors]
@@ -105,7 +105,7 @@ def pick_daily_pair(
     for _ in range(500):
         word_a, word_b = rng.sample(available, 2)
         sim = cosine_similarity(vectors[word_a], vectors[word_b])
-        if sim < 10:
+        if sim < 5:
             return (word_a, word_b)
 
     # 500 denemede bulunamazsa, en düşük benzerliğe sahip çifti seç

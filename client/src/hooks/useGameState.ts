@@ -23,6 +23,8 @@ export interface GraphLink {
   similarity: number;
 }
 
+export type WinAnimationPhase = 'idle' | 'highlighting' | 'done';
+
 export interface GameState {
   isLoading: boolean;
   error: string | null;
@@ -37,6 +39,9 @@ export interface GameState {
   selectedNode: string | null;
   selectedNodeSimilarities: SimilarityResult[];
   isGuessing: boolean;
+  winAnimationPhase: WinAnimationPhase;
+  winShortestPath: string[] | null;
+  preWinChainSides: Record<string, GraphNode['chainSide']> | null;
 }
 
 /* ============================================
@@ -121,6 +126,9 @@ export function useGameState() {
     selectedNode: null,
     selectedNodeSimilarities: [],
     isGuessing: false,
+    winAnimationPhase: 'idle',
+    winShortestPath: null,
+    preWinChainSides: null,
   });
 
   // Tüm benzerlik sonuçlarını sakla (her kelime için)
@@ -217,6 +225,9 @@ export function useGameState() {
             selectedNode: null,
             selectedNodeSimilarities: [],
             isGuessing: false,
+            winAnimationPhase: 'idle',
+            winShortestPath: null,
+            preWinChainSides: null,
           });
           return;
         }
@@ -264,6 +275,9 @@ export function useGameState() {
             selectedNode: null,
             selectedNodeSimilarities: [],
             isGuessing: false,
+            winAnimationPhase: 'idle',
+            winShortestPath: null,
+            preWinChainSides: null,
           });
           return;
         }
@@ -286,8 +300,11 @@ export function useGameState() {
           selectedNode: null,
           selectedNodeSimilarities: [],
           isGuessing: false,
+          winAnimationPhase: 'idle',
+          winShortestPath: null,
+          preWinChainSides: null,
         });
-      } catch (err) {
+      } catch {
         setState((prev) => ({
           ...prev,
           isLoading: false,
@@ -379,8 +396,22 @@ export function useGameState() {
 
           if (won && !hasRecordedWin.current) {
             hasRecordedWin.current = true;
-            recordWin(prev.puzzleDate);
+            recordWin(prev.puzzleDate, newGuessCount);
             recordSolve(newGuessCount).catch(() => {});
+          }
+
+          // If won, compute shortest path and preserve pre-win chain sides for animation
+          let winPath: string[] | null = null;
+          let preWinSides: Record<string, GraphNode['chainSide']> | null = null;
+          if (won) {
+            const adjForPath = buildAdjacency(newLinks);
+            winPath = findShortestPath(prev.wordA, prev.wordB, adjForPath);
+            // Snapshot chain sides BEFORE win so animation can blend blue/red → purple
+            preWinSides = {};
+            for (const n of prev.nodes) {
+              preWinSides[n.id] = n.chainSide;
+            }
+            preWinSides[w] = 'none'; // new word hasn't been colored yet
           }
 
           return {
@@ -389,11 +420,14 @@ export function useGameState() {
             links: newLinks,
             guessCount: newGuessCount,
             isSolved: won,
-            showWinBanner: won,
+            showWinBanner: false, // Don't show banner yet — animation first
             isGuessing: false,
             error: null,
             selectedNode: w,
             selectedNodeSimilarities: result.similarities,
+            winAnimationPhase: won ? 'highlighting' : 'idle',
+            winShortestPath: won ? winPath : null,
+            preWinChainSides: preWinSides,
           };
         });
       } catch (err: unknown) {
@@ -407,7 +441,7 @@ export function useGameState() {
         setState((prev) => ({ ...prev, isGuessing: false, error: message }));
       }
     },
-    [state.nodes, state.isSolved, state.links, state.wordA, state.wordB, state.puzzleDate, updateChainSides, checkWin, saveGameState, recordWin]
+    [state.nodes, state.isSolved, updateChainSides, checkWin, saveGameState, recordWin]
   );
 
   /* ---------- Düğüm seçimi ---------- */
@@ -455,6 +489,15 @@ export function useGameState() {
     setState((prev) => ({ ...prev, showWinBanner: false }));
   }, []);
 
+  /* ---------- Animasyon tamamlandı: banner göster ---------- */
+  const finishWinAnimation = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      winAnimationPhase: 'done',
+      showWinBanner: true,
+    }));
+  }, []);
+
   return {
     ...state,
     stats,
@@ -462,5 +505,6 @@ export function useGameState() {
     selectNode,
     closeWinBanner,
     getShortestPath,
+    finishWinAnimation,
   };
 }

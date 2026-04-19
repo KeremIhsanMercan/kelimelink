@@ -22,6 +22,7 @@ export interface PlayerStats {
   currentStreak: number;
   maxStreak: number;
   lastPlayedDate: string | null;
+  guessDistribution: Record<number, number>; // guessCount -> # of times
 }
 
 const GAME_STATE_KEY = 'kelimelink-game-state';
@@ -53,6 +54,7 @@ const DEFAULT_STATS: PlayerStats = {
   currentStreak: 0,
   maxStreak: 0,
   lastPlayedDate: null,
+  guessDistribution: {},
 };
 
 export function useLocalStorage() {
@@ -87,19 +89,22 @@ export function useLocalStorage() {
   /**
    * Oyun kazanıldığında istatistikleri günceller.
    */
-  const recordWin = useCallback((todayDate: string): void => {
+  const recordWin = useCallback((todayDate: string, guessCount: number): void => {
     setStats((prev) => {
       const isConsecutive =
         prev.lastPlayedDate !== null &&
         isYesterday(prev.lastPlayedDate, todayDate);
 
       const newStreak = isConsecutive ? prev.currentStreak + 1 : 1;
+      const newDist = { ...(prev.guessDistribution || {}) };
+      newDist[guessCount] = (newDist[guessCount] || 0) + 1;
       return {
         gamesPlayed: prev.gamesPlayed + 1,
         gamesWon: prev.gamesWon + 1,
         currentStreak: newStreak,
         maxStreak: Math.max(prev.maxStreak, newStreak),
         lastPlayedDate: todayDate,
+        guessDistribution: newDist,
       };
     });
   }, []);

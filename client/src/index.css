@@ -115,6 +115,14 @@ body {
   z-index: 10;
 }
 
+.app-header__logo {
+  height: 32px;
+  width: 32px;
+  margin-right: 12px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
 .app-header__title {
   font-size: 1.4rem;
   font-weight: 700;
@@ -408,7 +416,9 @@ body {
 .graph-container {
   flex: 1;
   position: relative;
-  background: var(--color-bg);
+  background-color: var(--color-bg);
+  background-image: radial-gradient(var(--color-border) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
   overflow: hidden;
 }
 
@@ -572,6 +582,256 @@ body {
 }
 
 /* ============================================
+   Profile Button in Header
+   ============================================ */
+
+.app-header__profile-btn {
+  position: absolute;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.app-header__profile-btn:hover {
+  border-color: var(--color-word-a);
+  color: var(--color-word-a);
+  background: var(--color-word-a-bg);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.app-header__profile-btn:active {
+  transform: translateY(0);
+}
+
+/* ============================================
+   Profile Modal
+   ============================================ */
+
+.profile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+
+.profile-modal {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 36px 40px 32px;
+  box-shadow: var(--shadow-xl);
+  animation: scaleIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  max-width: 440px;
+  width: 92%;
+  position: relative;
+}
+
+.profile-modal__close-x {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.profile-modal__close-x:hover {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+
+.profile-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.profile-modal__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ede9fe, #dbeafe);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-word-both);
+  flex-shrink: 0;
+}
+
+.profile-modal__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* Stats Grid */
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.profile-stat-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 14px 8px;
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.profile-stat-card:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-stat-card__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.profile-stat-card__label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* Guess Distribution */
+.profile-distribution {
+  margin-bottom: 24px;
+}
+
+.profile-distribution__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: 14px;
+}
+
+.profile-distribution__chart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-distribution__empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 24px 0;
+  font-style: italic;
+}
+
+.profile-dist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-dist-row__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-dist-row__bar-track {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-dist-row__bar {
+  background: linear-gradient(30deg, #0030bf, #c80000);
+  border-radius: 10px;
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 10px;
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: barGrow 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes barGrow {
+  from {
+    width: 0% !important;
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.profile-dist-row__count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-modal__close-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-text-primary);
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.profile-modal__close-btn:hover {
+  background: #374151;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.profile-modal__close-btn:active {
+  transform: translateY(0);
+}
+
+/* ============================================
    Responsive (mobil uyumluluk)
    ============================================ */
 
@@ -590,5 +850,13 @@ body {
 
   .graph-container {
     min-height: 50vh;
+  }
+
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-modal {
+    padding: 28px 24px 24px;
   }
 }

@@ -24,7 +24,7 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 word_vectors: dict = {}
 
-SIMILARITY_THRESHOLD = int(os.getenv("SIMILARITY_THRESHOLD", "24"))
+SIMILARITY_THRESHOLD = int(os.getenv("SIMILARITY_THRESHOLD", "33"))
 CSV_PATH = os.getenv("CSV_PATH", "../semantics_dataset/numberbatch_temiz.csv")
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 

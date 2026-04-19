@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d';
 import { forceCollide } from 'd3-force';
-import type { GraphNode, GraphLink } from '../hooks/useGameState';
+import type { GraphNode, GraphLink, WinAnimationPhase } from '../hooks/useGameState';
 
 interface GraphCanvasProps {
   nodes: GraphNode[];
@@ -10,6 +10,10 @@ interface GraphCanvasProps {
   shortestPath: string[] | null;
   selectedNode: string | null;
   onNodeClick: (nodeId: string) => void;
+  winAnimationPhase: WinAnimationPhase;
+  winShortestPath: string[] | null;
+  preWinChainSides: Record<string, GraphNode['chainSide']> | null;
+  onWinAnimationFinish: () => void;
 }
 
 /* ============================================
@@ -23,16 +27,48 @@ const COLORS = {
   path: { stroke: '#059669', fill: '#ecfdf5', text: '#065f46' },
 };
 
+// Purple target for the color transition during win animation
+const PURPLE_COLOR = { stroke: '#7c3aed', fill: '#f5f3ff', text: '#5b21b6' };
+
+function lerpColor(hex1: string, hex2: string, t: number): string {
+  const r1 = parseInt(hex1.slice(1, 3), 16);
+  const g1 = parseInt(hex1.slice(3, 5), 16);
+  const b1 = parseInt(hex1.slice(5, 7), 16);
+  const r2 = parseInt(hex2.slice(1, 3), 16);
+  const g2 = parseInt(hex2.slice(3, 5), 16);
+  const b2 = parseInt(hex2.slice(5, 7), 16);
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
 function getNodeColor(node: GraphNode, isOnPath: boolean) {
   if (isOnPath) return COLORS.path;
   return COLORS[node.chainSide] ?? COLORS.none;
 }
 
+/** Returns a blended color for non-path nodes during the win animation (towards purple) */
+function getAnimatedNodeColor(
+  chainSide: GraphNode['chainSide'],
+  purpleProgress: number
+): { stroke: string; fill: string; text: string } {
+  const base = COLORS[chainSide] ?? COLORS.none;
+  // Only shift blue (a) and red (b) nodes toward purple
+  if (chainSide !== 'a' && chainSide !== 'b') return base;
+  return {
+    stroke: lerpColor(base.stroke, PURPLE_COLOR.stroke, purpleProgress),
+    fill: lerpColor(base.fill, PURPLE_COLOR.fill, purpleProgress),
+    text: lerpColor(base.text, PURPLE_COLOR.text, purpleProgress),
+  };
+}
+
 /* ============================================
    Sabitler
    ============================================ */
-const MIN_LINK_DISTANCE = 180;
+const MIN_LINK_DISTANCE = 100;
 const MIN_ZOOM = 0.8;
+const STEP_DELAY_MS = 700; // delay between each path step
 
 /* Düğüm boyutu (kelime uzunluğuna göre) */
 function getNodeHalfWidth(word: string) {
@@ -75,10 +111,22 @@ export default function GraphCanvas({
   shortestPath,
   selectedNode,
   onNodeClick,
+  winAnimationPhase,
+  winShortestPath,
+  preWinChainSides,
+  onWinAnimationFinish,
 }: GraphCanvasProps) {
   const fgRef = useRef<ForceGraphMethods>(undefined!);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  /* ---- Win animation state ---- */
+  // How many nodes of the path have been revealed so far (0 = none, path.length = all)
+  const [animRevealedSteps, setAnimRevealedSteps] = useState(0);
+  // Progress of the purple color shift [0..1]
+  const [purpleProgress, setPurpleProgress] = useState(0);
+  // Timestamp for pulsating glow
+  const [animTime, setAnimTime] = useState(0);
 
   /* ---- Boyut izleme ---- */
   useEffect(() => {
@@ -92,20 +140,92 @@ export default function GraphCanvas({
     return () => { clearTimeout(t); window.removeEventListener('resize', updateSize); };
   }, []);
 
-  /* ---- Kısa yol setleri ---- */
-  const pathSet = useMemo(() => {
-    return shortestPath ? new Set(shortestPath) : new Set<string>();
-  }, [shortestPath]);
+  /* ---- Win animation orchestrator ---- */
+  const animIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animFinalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const pathEdges = useMemo(() => {
-    if (!shortestPath || shortestPath.length < 2) return new Set<string>();
+  useEffect(() => {
+    if (winAnimationPhase !== 'highlighting' || !winShortestPath || winShortestPath.length === 0) {
+      return;
+    }
+
+    const totalSteps = winShortestPath.length;
+
+    // Small initial delay, then start stepping
+    const initialDelay = setTimeout(() => {
+      let step = 0;
+      animIntervalRef.current = setInterval(() => {
+        step++;
+        setAnimRevealedSteps(step);
+        // Purple progress ramps from 0 to 1 over the course of the animation
+        setPurpleProgress(Math.min(step / totalSteps, 1));
+
+        if (step >= totalSteps) {
+          if (animIntervalRef.current) clearInterval(animIntervalRef.current);
+          animIntervalRef.current = null;
+          // Wait a moment after the last step, then finish
+          animFinalTimeoutRef.current = setTimeout(() => {
+            onWinAnimationFinish();
+            animFinalTimeoutRef.current = null;
+          }, 800);
+        }
+      }, STEP_DELAY_MS);
+    }, 600);
+
+    return () => {
+      clearTimeout(initialDelay);
+      if (animIntervalRef.current) { clearInterval(animIntervalRef.current); animIntervalRef.current = null; }
+      if (animFinalTimeoutRef.current) { clearTimeout(animFinalTimeoutRef.current); animFinalTimeoutRef.current = null; }
+    };
+  }, [winAnimationPhase, winShortestPath, onWinAnimationFinish]);
+
+  /* ---- Pulsating glow timer during animation ---- */
+  useEffect(() => {
+    if (winAnimationPhase !== 'highlighting') {
+      return;
+    }
+    let raf: number;
+    const tick = () => {
+      setAnimTime(Date.now());
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [winAnimationPhase]);
+
+  /* ---- Kısa yol setleri ---- */
+  // Build path sets from either the final solved state or the animation progress
+  const animPathNodes = useMemo(() => {
+    if (winAnimationPhase === 'highlighting' && winShortestPath) {
+      return new Set(winShortestPath.slice(0, animRevealedSteps));
+    }
+    return shortestPath ? new Set(shortestPath) : new Set<string>();
+  }, [winAnimationPhase, winShortestPath, animRevealedSteps, shortestPath]);
+
+  const animPathEdges = useMemo(() => {
     const s = new Set<string>();
+    if (winAnimationPhase === 'highlighting' && winShortestPath) {
+      for (let i = 0; i < animRevealedSteps - 1; i++) {
+        s.add(`${winShortestPath[i]}-${winShortestPath[i + 1]}`);
+        s.add(`${winShortestPath[i + 1]}-${winShortestPath[i]}`);
+      }
+      return s;
+    }
+    if (!shortestPath || shortestPath.length < 2) return s;
     for (let i = 0; i < shortestPath.length - 1; i++) {
       s.add(`${shortestPath[i]}-${shortestPath[i + 1]}`);
       s.add(`${shortestPath[i + 1]}-${shortestPath[i]}`);
     }
     return s;
-  }, [shortestPath]);
+  }, [winAnimationPhase, winShortestPath, animRevealedSteps, shortestPath]);
+
+  // The "just revealed" node (for pulsating glow)
+  const latestRevealedNode = useMemo(() => {
+    if (winAnimationPhase === 'highlighting' && winShortestPath && animRevealedSteps > 0) {
+      return winShortestPath[animRevealedSteps - 1];
+    }
+    return null;
+  }, [winAnimationPhase, winShortestPath, animRevealedSteps]);
 
   /* ---- Grafik verisi ----
      Başlangıç düğümlerinin pozisyonlarını sabitliyoruz (x: -200 ve x: 200).
@@ -154,15 +274,6 @@ export default function GraphCanvas({
     // burada ek bir işlem yapmamıza gerek kalmadı.
   }, []);
 
-  /* ---- Kazanma: yeniden düzenle ---- */
-  useEffect(() => {
-    if (isSolved && fgRef.current) {
-      setTimeout(() => {
-        fgRef.current?.d3ReheatSimulation();
-        setTimeout(() => fgRef.current?.zoomToFit(600, 60), 800);
-      }, 300);
-    }
-  }, [isSolved]);
 
   /* ---- Düğüm çizimi ---- */
   const paintNode = useCallback((
@@ -171,17 +282,48 @@ export default function GraphCanvas({
   ) => {
     const hw = getNodeHalfWidth(node.word);
     const hh = 15;
-    const isOnPath = isSolved && pathSet.has(node.id);
-    const colors = getNodeColor(node, isOnPath);
+    const isHighlightingAnimation = winAnimationPhase === 'highlighting';
+    const showPathColors = isSolved || isHighlightingAnimation;
+    const isOnPath = showPathColors && animPathNodes.has(node.id);
     const isStarting = node.type === 'start_a' || node.type === 'start_b';
     const isSelected = node.id === selectedNode;
+    const isLatestRevealed = node.id === latestRevealedNode;
+
+    // During highlighting animation, blend non-path node colors toward purple
+    let colors: { stroke: string; fill: string; text: string };
+    if (isHighlightingAnimation && !isOnPath) {
+      // Use pre-win chain side so we blend from original blue/red, not already-'both'
+      const effectiveSide = (preWinChainSides && node.id in preWinChainSides)
+        ? preWinChainSides[node.id]
+        : node.chainSide;
+      colors = getAnimatedNodeColor(effectiveSide, purpleProgress);
+    } else if (isOnPath) {
+      colors = COLORS.path;
+    } else {
+      colors = getNodeColor(node, false);
+    }
+
+    // Pulsating glow for the latest revealed node
+    if (isLatestRevealed && isHighlightingAnimation) {
+      const pulse = 0.5 + 0.5 * Math.sin(animTime * 0.006);
+      const glowRadius = 6 + pulse * 8;
+      const glowAlpha = 0.2 + pulse * 0.3;
+      ctx.save();
+      ctx.shadowColor = `rgba(5, 150, 105, ${glowAlpha})`;
+      ctx.shadowBlur = glowRadius;
+      ctx.beginPath();
+      ctx.ellipse(node.x, node.y, hw + 3, hh + 3, 0, 0, 2 * Math.PI);
+      ctx.fillStyle = `rgba(5, 150, 105, ${glowAlpha * 0.3})`;
+      ctx.fill();
+      ctx.restore();
+    }
 
     ctx.beginPath();
     ctx.ellipse(node.x, node.y, hw, hh, 0, 0, 2 * Math.PI);
     ctx.fillStyle = colors.fill;
     ctx.fill();
     ctx.strokeStyle = colors.stroke;
-    ctx.lineWidth = isStarting || isOnPath || isSelected ? 2.5 : 1.5;
+    ctx.lineWidth = isStarting || isOnPath || isSelected || isLatestRevealed ? 2.5 : 1.5;
     ctx.stroke();
 
     ctx.fillStyle = colors.text;
@@ -189,7 +331,7 @@ export default function GraphCanvas({
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(node.word, node.x, node.y);
-  }, [isSolved, pathSet, selectedNode]);
+  }, [isSolved, animPathNodes, selectedNode, winAnimationPhase, purpleProgress, latestRevealedNode, animTime, preWinChainSides]);
 
   /* ---- Sınır kutusu çizimi (debug için siyah, görünür olacak şekilde) ---- */
   const paintBackground = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -219,15 +361,33 @@ export default function GraphCanvas({
   ) => {
     const srcId = typeof link.source === 'object' ? link.source.id : (link.source as string);
     const tgtId = typeof link.target === 'object' ? link.target.id : (link.target as string);
-    const isPath = isSolved && pathEdges.has(`${srcId}-${tgtId}`);
+    const isHighlightingAnimation = winAnimationPhase === 'highlighting';
+    const showPathColors = isSolved || isHighlightingAnimation;
+    const isPath = showPathColors && animPathEdges.has(`${srcId}-${tgtId}`);
 
     ctx.beginPath();
     ctx.moveTo(link.source.x, link.source.y);
     ctx.lineTo(link.target.x, link.target.y);
-    ctx.strokeStyle = isPath ? '#059669' : '#d1d5db';
-    ctx.lineWidth = isPath ? 3 : 1;
-    ctx.stroke();
-  }, [isSolved, pathEdges]);
+
+    if (isPath) {
+      // Glow effect for path edges
+      if (isHighlightingAnimation) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(5, 150, 105, 0.4)';
+        ctx.shadowBlur = 8;
+      }
+      ctx.strokeStyle = '#059669';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      if (isHighlightingAnimation) {
+        ctx.restore();
+      }
+    } else {
+      ctx.strokeStyle = '#d1d5db';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }, [isSolved, animPathEdges, winAnimationPhase]);
 
   /* ---- Hit alanı ---- */
   const nodePointerAreaPaint = useCallback((
@@ -244,8 +404,12 @@ export default function GraphCanvas({
 
   /* ---- Düğüm tıklama ---- */
   const handleNodeClick = useCallback(
-    (node: GraphNode) => onNodeClick(node.id),
-    [onNodeClick]
+    (node: GraphNode) => {
+      // Disable clicks during win animation
+      if (winAnimationPhase === 'highlighting') return;
+      onNodeClick(node.id);
+    },
+    [onNodeClick, winAnimationPhase]
   );
 
   /* ---- Sürükleme sırasında: başlangıç kelimelerini sabitle, diğerlerini sınırla ---- */
@@ -284,8 +448,15 @@ export default function GraphCanvas({
   /* ---- Zoom/pan sınırlaması ----
      Kullanıcının kamerayı sınırların dışına kaydırmasını engeller. */
   const isFixingPan = useRef(false);
+  // Use a ref so the callback identity stays stable across phase changes
+  // (re-registering d3-zoom handlers causes event-stealing bugs)
+  const winPhaseRef = useRef(winAnimationPhase);
+  winPhaseRef.current = winAnimationPhase;
+
   const handleZoomEnd = useCallback(({ k, x, y }: { k: number; x: number; y: number }) => {
     if (isFixingPan.current) return;
+    // Don't clamp during win highlight animation
+    if (winPhaseRef.current === 'highlighting') return;
     const fg = fgRef.current;
     if (!fg) return;
 
@@ -340,7 +511,7 @@ export default function GraphCanvas({
           onZoomEnd={handleZoomEnd as unknown as (transform: { k: number; x: number; y: number }) => void}
           width={dimensions.width}
           height={dimensions.height}
-          backgroundColor="#fafafa"
+          backgroundColor="transparent"
           d3AlphaDecay={0.02}
           d3VelocityDecay={0.45}
           cooldownTicks={150}

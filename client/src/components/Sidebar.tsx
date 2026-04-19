@@ -17,7 +17,6 @@ interface SidebarProps {
 export default function Sidebar({
   wordA,
   wordB,
-  nodeCount,
   guessCount,
   isSolved,
   isGuessing,
@@ -29,6 +28,34 @@ export default function Sidebar({
   const [inputValue, setInputValue] = useState('');
   const [localWarning, setLocalWarning] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [timeLeft, setTimeLeft] = useState<string>('');
+
+  useEffect(() => {
+    if (!isGuessing && !isSolved && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isGuessing, isSolved]);
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const diff = tomorrow.getTime() - now.getTime();
+      
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setTimeLeft(
+        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      );
+    };
+    
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -74,6 +101,9 @@ export default function Sidebar({
           <span className="starting-words__arrow">⟷</span>
           <span className="starting-word starting-word--b">{wordB}</span>
         </div>
+        <p className="links-info" style={{ marginTop: '12px', marginBottom: 0 }}>
+          Sonraki bulmacaya: {timeLeft}
+        </p>
       </div>
 
       {/* Kelime Ekleme */}
@@ -81,6 +111,7 @@ export default function Sidebar({
         <div className="sidebar__label">Kelime Ekle</div>
         <form className="guess-form" onSubmit={handleSubmit}>
           <input
+            ref={inputRef}
             className="guess-input"
             type="text"
             value={inputValue}
@@ -105,9 +136,6 @@ export default function Sidebar({
       {/* Durum */}
       <div className="sidebar__section">
         <div className="sidebar__label">Durum</div>
-        <p className="status-text">
-          Tahtada <strong>{nodeCount} kelime</strong> var.
-        </p>
         <p className="status-text" style={{ marginTop: 4 }}>
           Toplam <strong>{guessCount} tahmin</strong> yapıldı.
         </p>
@@ -135,7 +163,7 @@ export default function Sidebar({
               <span className="selected-word-badge">{selectedNode}</span>
             </div>
             <p className="links-info">
-              İki kelime arasındaki benzerlik %24'i geçerse bağlantı oluşur.
+              İki kelime arasındaki benzerlik %33'i geçerse bağlantı oluşur.
             </p>
             <div className="links-table" ref={scrollRef}>
               {selectedNodeSimilarities.length > 0 ? (
