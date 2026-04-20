@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
@@ -22,10 +22,8 @@ from database import init_tables, get_daily_puzzle, save_daily_puzzle, record_so
 load_dotenv()
 
 # ---------------------------------------------------------------------------
-# Global: kelime vektörleri bellekte tutulacak
+# Global constants
 # ---------------------------------------------------------------------------
-word_vectors: dict = {}
-
 SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "27.5"))
 CSV_PATH = os.getenv("CSV_PATH", "../semantics_dataset/numberbatch_temiz.csv")
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
@@ -36,7 +34,6 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global word_vectors
     print("[Sunucu] Başlatılıyor...")
     # Tabloları oluştur
     try:
@@ -45,8 +42,8 @@ async def lifespan(app: FastAPI):
         print(f"[Sunucu] DB tabloları oluşturulamadı: {e}")
 
     # Vektörleri yükle
-    word_vectors = load_vectors(CSV_PATH)
-    print(f"[Sunucu] {len(word_vectors)} kelime vektörü bellekte hazır.")
+    app.state.word_vectors = load_vectors(CSV_PATH)
+    print(f"[Sunucu] {len(app.state.word_vectors)} kelime vektörü bellekte hazır.")
     yield
     print("[Sunucu] Kapatılıyor...")
 
@@ -87,7 +84,7 @@ def normalize_similarity_request(req: GuessRequest) -> tuple[str, list[str]]:
     return word, board_words
 
 
-def build_similarity_response(word: str, board_words: list[str]):
+def build_similarity_response(word: str, board_words: list[str], word_vectors: dict):
     similarities = get_all_similarities(word, board_words, word_vectors)
     links = [s for s in similarities if s["is_link"]]
 
@@ -103,16 +100,17 @@ def build_similarity_response(word: str, board_words: list[str]):
 # Endpoints
 # ---------------------------------------------------------------------------
 @app.get("/api/health")
-async def health():
-    return {"status": "ok", "words_loaded": len(word_vectors)}
+async def health(request: Request):
+    return {"status": "ok", "words_loaded": len(request.app.state.word_vectors)}
 
 
 @app.get("/api/daily-puzzle")
-async def daily_puzzle():
+async def daily_puzzle(request: Request):
     """
     Bugünün bulmacasını döndürür.
     Eğer bugün için bulmaca yoksa, yeni bir çift oluşturur.
     """
+    word_vectors = request.app.state.word_vectors
     today = date.today()
 
     # Veritabanından kontrol et
@@ -142,11 +140,12 @@ async def daily_puzzle():
 
 
 @app.get("/api/practice-puzzle")
-async def practice_puzzle():
+async def practice_puzzle(request: Request):
     """
     Pratik modu için rastgele bir bulmaca döndürür.
     Her istek yeni bir çift oluşturur. DB'ye kaydedilmez.
     """
+    word_vectors = request.app.state.word_vectors
     word_a, word_b = pick_practice_pair(word_vectors)
     return {
         "word_a": word_a,
@@ -155,11 +154,12 @@ async def practice_puzzle():
 
 
 @app.post("/api/guess")
-async def guess(req: GuessRequest):
+async def guess(req: GuessRequest, request: Request):
     """
     Tahmin edilen kelimenin tahtadaki tüm kelimelerle benzerlik skorlarını hesaplar.
     """
     word, board_words = normalize_similarity_request(req)
+    word_vectors = request.app.state.word_vectors
 
     # Kelime vektörlerde var mı?
     if word not in word_vectors:
@@ -175,11 +175,11 @@ async def guess(req: GuessRequest):
             detail=f"'{word}' zaten tahtada mevcut.",
         )
 
-    return build_similarity_response(word, board_words)
+    return build_similarity_response(word, board_words, word_vectors)
 
 
 @app.post("/api/solve")
-async def solve(req: SolveRequest):
+async def solve(req: SolveRequest, request: Request):
     """Anonim çözüm kaydeder. Pratik mod ise sabit tarihe (2003-05-26) kaydeder."""
     target_date = date(2003, 5, 26) if req.is_practice else date.today()
     try:
@@ -191,18 +191,19 @@ async def solve(req: SolveRequest):
 
 
 @app.get("/api/stats")
-async def stats():
+async def stats(request: Request):
     """Bugünün global istatistiklerini döndürür."""
     today = date.today()
     return get_today_stats(today)
 
 
 @app.post("/api/similarities")
-async def similarities(req: GuessRequest):
+async def similarities(req: GuessRequest, request: Request):
     """
     Herhangi bir kelimenin tahtadaki diğer kelimelerle benzerlik skorlarını hesaplar.
     Tahmin yerine, mevcut kelimelere tıklandığında kullanılır (başlangıç kelimeleri dahil).
     """
+    word_vectors = request.app.state.word_vectors
     word, board_words = normalize_similarity_request(req)
     board_words = [w for w in board_words if w != word]
 
@@ -212,14 +213,15 @@ async def similarities(req: GuessRequest):
             detail=f"'{word}' kelimesi veritabanında bulunamadı.",
         )
 
-    return build_similarity_response(word, board_words)
+    return build_similarity_response(word, board_words, word_vectors)
 
 
 from fastapi import Path
 
 @app.get("/api/check-word/{word}")
-async def check_word(word: str = Path(..., max_length=100)):
+async def check_word(request: Request, word: str = Path(..., max_length=100)):
     """Bir kelimenin vektörlerde olup olmadığını kontrol eder."""
+    word_vectors = request.app.state.word_vectors
     word = word.strip().lower()
     exists = word in word_vectors
     return {"word": word, "exists": exists}
@@ -230,7 +232,13 @@ app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 @app.exception_handler(404)
 async def custom_404_handler(request: Request, exc: HTTPException):
+    # Eğer hata bir API isteğinden geliyorsa
     if request.url.path.startswith("/api/"):
-        return {"detail": "API endpoint not found"}
+        # HTTPException'dan gelen asıl mesajı korumak için exc.detail kullanıyoruz
+        return JSONResponse(
+            status_code=404,
+            content={"detail": getattr(exc, "detail", "Not Found")}
+        )
     
+    # API değilse (sayfa yenileme vb.) React index.html'i dön
     return FileResponse("static/index.html")
