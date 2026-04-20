@@ -9,7 +9,7 @@ import os
 from datetime import date
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -223,3 +223,14 @@ async def check_word(word: str = Path(..., max_length=100)):
     word = word.strip().lower()
     exists = word in word_vectors
     return {"word": word, "exists": exists}
+
+# Serve static files (React frontend)
+# Make sure the 'static' directory exists (it will be created by the Docker build)
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+@app.exception_handler(404)
+async def custom_404_handler(request: Request, exc: HTTPException):
+    if request.url.path.startswith("/api/"):
+        return {"detail": "API endpoint not found"}
+    
+    return FileResponse("static/index.html")
