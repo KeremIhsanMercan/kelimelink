@@ -518,9 +518,9 @@ export default function GraphCanvas({
 
     // Çarpışma: düğümler üst üste binmez
     fg.d3Force('collide',
-      forceCollide<GraphNode & { x: number; y: number }>((node) =>
+      forceCollide((node: any) =>
         getNodeHalfWidth(node.word) + 16
-      ).strength(1).iterations(6)
+      ).strength(1).iterations(6) as any
     );
 
     // Dinamik sınır kutusu

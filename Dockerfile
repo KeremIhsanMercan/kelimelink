@@ -5,7 +5,6 @@ COPY client/package*.json ./
 RUN npm install
 COPY client/ ./
 # Use relative paths for API calls in the build
-ENV VITE_BACKEND_URL=""
 RUN npm run build
 
 # Stage 2: Final image with Python backend and built frontend
