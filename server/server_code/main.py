@@ -11,6 +11,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
@@ -221,3 +223,26 @@ async def check_word(word: str = Path(..., max_length=100)):
     word = word.strip().lower()
     exists = word in word_vectors
     return {"word": word, "exists": exists}
+
+
+# ---------------------------------------------------------------------------
+# Frontend: Statik dosyaları servis et (Sadece Docker/Üretim modunda)
+# ---------------------------------------------------------------------------
+FRONTEND_PATH = os.getenv("FRONTEND_PATH")
+
+if FRONTEND_PATH and os.path.exists(FRONTEND_PATH):
+    # Assets klasörünü mount et (js, css, images vb.)
+    assets_path = os.path.join(FRONTEND_PATH, "assets")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
+    # Diğer tüm istekler için index.html döndür (SPA routing için)
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        
+        index_file = os.path.join(FRONTEND_PATH, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+        raise HTTPException(status_code=404)

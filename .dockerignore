@@ -1,0 +1,11 @@
+.git
+.gitignore
+node_modules
+client/node_modules
+client/dist
+server/server_code/__pycache__
+server/server_code/.env
+client/.env
+*.db
+.vscode
+.idea
