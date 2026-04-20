@@ -534,7 +534,7 @@ export function useGameState() {
         setState((prev) => ({ ...prev, isGuessing: false, error: message }));
       }
     },
-    [state.nodes, state.isSolved, updateChainSides, checkWin, saveGameState, recordWin, recordPracticeWin, gameMode]
+    [state.nodes, state.isSolved, updateChainSides, checkWin, saveGameState, recordWin, recordPracticeWin, gameMode, savePracticeGameState]
   );
 
   /* ---------- Düğüm seçimi ---------- */
