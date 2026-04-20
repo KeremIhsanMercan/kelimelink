@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 from nlp_engine import load_vectors, cosine_similarity, get_all_similarities, pick_daily_pair, pick_practice_pair
@@ -24,7 +24,7 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 word_vectors: dict = {}
 
-SIMILARITY_THRESHOLD = int(os.getenv("SIMILARITY_THRESHOLD", "27.5"))
+SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "27.5"))
 CSV_PATH = os.getenv("CSV_PATH", "../semantics_dataset/numberbatch_temiz.csv")
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 
@@ -70,13 +70,31 @@ app.add_middleware(
 # Pydantic modelleri
 # ---------------------------------------------------------------------------
 class GuessRequest(BaseModel):
-    word: str
-    board_words: list[str]
+    word: str = Field(..., max_length=100)
+    board_words: list[str] = Field(..., max_length=5000)
 
 
 class SolveRequest(BaseModel):
-    guess_count: int
+    guess_count: int = Field(..., ge=1, le=100000)
     is_practice: bool = False
+
+
+def normalize_similarity_request(req: GuessRequest) -> tuple[str, list[str]]:
+    word = req.word.strip().lower()
+    board_words = [w.strip().lower() for w in req.board_words]
+    return word, board_words
+
+
+def build_similarity_response(word: str, board_words: list[str]):
+    similarities = get_all_similarities(word, board_words, word_vectors)
+    links = [s for s in similarities if s["is_link"]]
+
+    return {
+        "word": word,
+        "similarities": similarities,
+        "links": links,
+        "has_links": len(links) > 0,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -139,8 +157,7 @@ async def guess(req: GuessRequest):
     """
     Tahmin edilen kelimenin tahtadaki tüm kelimelerle benzerlik skorlarını hesaplar.
     """
-    word = req.word.strip().lower()
-    board_words = [w.strip().lower() for w in req.board_words]
+    word, board_words = normalize_similarity_request(req)
 
     # Kelime vektörlerde var mı?
     if word not in word_vectors:
@@ -156,18 +173,7 @@ async def guess(req: GuessRequest):
             detail=f"'{word}' zaten tahtada mevcut.",
         )
 
-    # Tüm benzerlik skorlarını hesapla
-    similarities = get_all_similarities(word, board_words, word_vectors)
-
-    # Bağlantıları (linkler) filtrele
-    links = [s for s in similarities if s["is_link"]]
-
-    return {
-        "word": word,
-        "similarities": similarities,
-        "links": links,
-        "has_links": len(links) > 0,
-    }
+    return build_similarity_response(word, board_words)
 
 
 @app.post("/api/solve")
@@ -189,19 +195,14 @@ async def stats():
     return get_today_stats(today)
 
 
-class SimilarityRequest(BaseModel):
-    word: str
-    board_words: list[str]
-
-
 @app.post("/api/similarities")
-async def similarities(req: SimilarityRequest):
+async def similarities(req: GuessRequest):
     """
     Herhangi bir kelimenin tahtadaki diğer kelimelerle benzerlik skorlarını hesaplar.
     Tahmin yerine, mevcut kelimelere tıklandığında kullanılır (başlangıç kelimeleri dahil).
     """
-    word = req.word.strip().lower()
-    board_words = [w.strip().lower() for w in req.board_words if w.strip().lower() != word]
+    word, board_words = normalize_similarity_request(req)
+    board_words = [w for w in board_words if w != word]
 
     if word not in word_vectors:
         raise HTTPException(
@@ -209,19 +210,13 @@ async def similarities(req: SimilarityRequest):
             detail=f"'{word}' kelimesi veritabanında bulunamadı.",
         )
 
-    similarities = get_all_similarities(word, board_words, word_vectors)
-    links = [s for s in similarities if s["is_link"]]
+    return build_similarity_response(word, board_words)
 
-    return {
-        "word": word,
-        "similarities": similarities,
-        "links": links,
-        "has_links": len(links) > 0,
-    }
 
+from fastapi import Path
 
 @app.get("/api/check-word/{word}")
-async def check_word(word: str):
+async def check_word(word: str = Path(..., max_length=100)):
     """Bir kelimenin vektörlerde olup olmadığını kontrol eder."""
     word = word.strip().lower()
     exists = word in word_vectors

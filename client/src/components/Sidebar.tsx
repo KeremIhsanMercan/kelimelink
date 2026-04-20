@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react';
 import type { SimilarityResult } from '../services/api';
 import type { GameMode } from '../hooks/useGameState';
+import AdUnit from './AdUnit';
+import { Trophy } from 'lucide-react';
 
 interface SidebarProps {
   wordA: string;
@@ -82,6 +84,7 @@ export default function Sidebar({
     setLocalWarning(null);
     onAddWord(trimmed);
     setInputValue('');
+    window.scrollTo(0, 0);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -153,15 +156,18 @@ export default function Sidebar({
               marginTop: 8,
               color: '#059669',
               fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
           >
-            🞉 Bulmaca çözüldü!
+            <Trophy size={16} /> Bulmaca çözüldü!
           </p>
         )}
       </div>
 
       {/* Bağlananlar ve Bağlanmayanlar */}
-      <div className="sidebar__section" style={{ flex: 1 }}>
+      <div className="sidebar__section sidebar__section--results">
         <div className="sidebar__label">Bağlananlar ve Bağlanmayanlar</div>
 
         {selectedNode ? (
@@ -209,6 +215,15 @@ export default function Sidebar({
             Benzerlik skorlarını görmek için tahtadaki bir kelimeye tıklayın.
           </p>
         )}
+      </div>
+
+      {/* Sidebar Ad */}
+      <div className="sidebar-ad">
+        <AdUnit
+          slotId="4623860650"
+          format="rectangle"
+          responsive={true}
+        />
       </div>
     </aside>
   );

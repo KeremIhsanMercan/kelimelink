@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
 import { useDarkMode } from './hooks/useDarkMode';
 import GraphCanvas from './components/GraphCanvas';
 import Sidebar from './components/Sidebar';
 import WinBanner from './components/WinBanner';
 import ProfileModal from './components/ProfileModal';
+import InfoModal from './components/InfoModal';
+import AdUnit from './components/AdUnit';
 import './index.css';
 
 export default function App() {
@@ -35,10 +37,37 @@ export default function App() {
     finishWinAnimation,
     switchToDaily,
     switchToPractice,
+    startNewPracticeGame,
   } = useGameState();
+
 
   const { isDark, toggleDarkMode } = useDarkMode();
   const [showProfile, setShowProfile] = useState(false);
+  const [showInfo, setShowInfo] = useState(() => {
+    const hasVisited = localStorage.getItem('kelimelink_visited');
+    if (!hasVisited) {
+      localStorage.setItem('kelimelink_visited', 'true');
+      return true;
+    }
+    return false;
+  });
+
+  // Reset scroll position to top on mount and whenever game state changes.
+  // This prevents the header from being pushed off-screen by mobile browser behavior
+  // during input focus and keyboard events.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+  }, [isSolved, error]);
+
+  // Also handle window resize (keyboard pop up/down) to ensure we're at the top
+  useEffect(() => {
+    const handleResize = () => {
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   if (isLoading) {
     return (
@@ -68,7 +97,16 @@ export default function App() {
     <div className="app-layout">
       {/* Üst Başlık */}
       <header className="app-header">
-
+        <div className="app-header__left-actions">
+          <button
+            className="app-header__action-btn"
+            onClick={() => setShowInfo(true)}
+            aria-label="Nasıl Oynanır?"
+            title="Nasıl Oynanır?"
+          >
+            <Info size={20} />
+          </button>
+        </div>
         <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
         <h1 className="app-header__title">KelimeLink</h1>
         <span className="app-header__subtitle">Kelime Bağlantı Bulmacası</span>
@@ -96,8 +134,9 @@ export default function App() {
           {gameMode === 'practice' && (
             <button
               className="app-header__action-btn app-header__action-btn--new-game"
-              onClick={switchToPractice}
+              onClick={startNewPracticeGame}
               aria-label="Yeni Pratik Oyun"
+
               title="Yeni Pratik Oyun"
             >
               <RefreshCw size={20} />
@@ -160,7 +199,8 @@ export default function App() {
           practiceStats={gameMode === 'practice' ? practiceStats : undefined}
           gameMode={gameMode}
           onClose={closeWinBanner}
-          onNewPractice={gameMode === 'practice' ? switchToPractice : undefined}
+          onNewPractice={gameMode === 'practice' ? startNewPracticeGame : undefined}
+
         />
       )}
 
@@ -169,9 +209,27 @@ export default function App() {
         <ProfileModal
           stats={stats}
           practiceStats={practiceStats}
+          gameMode={gameMode}
           onClose={() => setShowProfile(false)}
         />
       )}
+
+      {/* Info Modal */}
+      {showInfo && (
+        <InfoModal
+          onClose={() => setShowInfo(false)}
+        />
+      )}
+
+      {/* Sticky Bottom Ad */}
+      <div className="sticky-bottom-ad">
+        <AdUnit
+          slotId="5519199413"
+          format="horizontal"
+          responsive={true}
+          style={{ height: '90px' }}
+        />
+      </div>
     </div>
   );
 }

@@ -35,6 +35,8 @@ export interface PracticeStats {
 const GAME_STATE_KEY = 'kelimelink-game-state';
 const STATS_KEY = 'kelimelink-stats';
 const PRACTICE_STATS_KEY = 'kelimelink-practice-stats';
+const PRACTICE_GAME_STATE_KEY = 'kelimelink-practice-game-state';
+
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -54,6 +56,15 @@ function saveToStorage<T>(key: string, value: T): void {
   } catch {
     // Depolama dolu veya erişim yok
   }
+}
+
+function incrementGuessDistribution(
+  distribution: Record<number, number> | undefined,
+  guessCount: number
+): Record<number, number> {
+  const next = { ...(distribution || {}) };
+  next[guessCount] = (next[guessCount] || 0) + 1;
+  return next;
 }
 
 const DEFAULT_STATS: PlayerStats = {
@@ -109,6 +120,28 @@ export function useLocalStorage() {
   }, []);
 
   /**
+   * Pratik oyun durumunu yükler.
+   */
+  const loadPracticeGameState = useCallback(() => {
+    return loadFromStorage<SavedGameState | null>(PRACTICE_GAME_STATE_KEY, null);
+  }, []);
+
+  /**
+   * Pratik oyun durumunu kaydeder.
+   */
+  const savePracticeGameState = useCallback((state: SavedGameState): void => {
+    saveToStorage(PRACTICE_GAME_STATE_KEY, state);
+  }, []);
+
+  /**
+   * Pratik oyun durumunu temizler.
+   */
+  const clearPracticeGameState = useCallback((): void => {
+    localStorage.removeItem(PRACTICE_GAME_STATE_KEY);
+  }, []);
+
+
+  /**
    * Oyun kazanıldığında istatistikleri günceller.
    */
   const recordWin = useCallback((todayDate: string, guessCount: number): void => {
@@ -118,15 +151,13 @@ export function useLocalStorage() {
         isYesterday(prev.lastPlayedDate, todayDate);
 
       const newStreak = isConsecutive ? prev.currentStreak + 1 : 1;
-      const newDist = { ...(prev.guessDistribution || {}) };
-      newDist[guessCount] = (newDist[guessCount] || 0) + 1;
       return {
         gamesPlayed: prev.gamesPlayed + 1,
         gamesWon: prev.gamesWon + 1,
         currentStreak: newStreak,
         maxStreak: Math.max(prev.maxStreak, newStreak),
         lastPlayedDate: todayDate,
-        guessDistribution: newDist,
+        guessDistribution: incrementGuessDistribution(prev.guessDistribution, guessCount),
       };
     });
   }, []);
@@ -137,12 +168,10 @@ export function useLocalStorage() {
    */
   const recordPracticeWin = useCallback((guessCount: number): void => {
     setPracticeStats((prev) => {
-      const newDist = { ...(prev.guessDistribution || {}) };
-      newDist[guessCount] = (newDist[guessCount] || 0) + 1;
       return {
         gamesPlayed: prev.gamesPlayed + 1,
         gamesWon: prev.gamesWon + 1,
-        guessDistribution: newDist,
+        guessDistribution: incrementGuessDistribution(prev.guessDistribution, guessCount),
       };
     });
   }, []);
@@ -152,10 +181,15 @@ export function useLocalStorage() {
     practiceStats,
     loadGameState,
     saveGameState,
+    loadPracticeGameState,
+    savePracticeGameState,
+    clearPracticeGameState,
     recordWin,
     recordPracticeWin,
   };
+
 }
+
 
 /**
  * İki tarih stringi arasında 1 gün fark olup olmadığını kontrol eder.

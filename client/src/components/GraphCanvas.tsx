@@ -67,17 +67,149 @@ function getAnimatedNodeColor(
    Sabitler
    ============================================ */
 const MIN_LINK_DISTANCE = 100;
-const MIN_ZOOM = 0.8;
 const STEP_DELAY_MS = 700; // delay between each path step
+const GOLDEN_ANGLE = 2.399963229728653;
+
+function hashToUnit(value: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    h ^= value.charCodeAt(i);
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+  }
+  return ((h >>> 0) % 1000000) / 1000000;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getClusterCenter(side: GraphNode['chainSide']) {
+  if (side === 'a') return { x: -260, y: -40 };
+  if (side === 'b') return { x: 260, y: 40 };
+  if (side === 'both') return { x: 0, y: -180 };
+  return { x: 0, y: 180 };
+}
+
+function buildAdjacency(links: GraphLink[]) {
+  const adj = new Map<string, Set<string>>();
+  for (const link of links) {
+    const source = typeof link.source === 'string' ? link.source : (link.source as unknown as GraphNode).id;
+    const target = typeof link.target === 'string' ? link.target : (link.target as unknown as GraphNode).id;
+    if (!adj.has(source)) adj.set(source, new Set());
+    if (!adj.has(target)) adj.set(target, new Set());
+    adj.get(source)?.add(target);
+    adj.get(target)?.add(source);
+  }
+  return adj;
+}
+
+function findShortestPath(start: string, end: string, links: GraphLink[]): string[] | null {
+  if (start === end) return [start];
+  const adj = buildAdjacency(links);
+  const visited = new Set<string>([start]);
+  const queue: string[][] = [[start]];
+
+  while (queue.length > 0) {
+    const path = queue.shift();
+    if (!path) continue;
+    const current = path[path.length - 1];
+    const neighbors = adj.get(current);
+    if (!neighbors) continue;
+
+    for (const n of neighbors) {
+      if (n === end) return [...path, n];
+      if (!visited.has(n)) {
+        visited.add(n);
+        queue.push([...path, n]);
+      }
+    }
+  }
+  return null;
+}
+
+function getPathAnchorByLink(
+  nodeId: string,
+  links: GraphLink[],
+  pathSet: Set<string>,
+  pathPositions: Map<string, { x: number; y: number }>
+) {
+  let best: { x: number; y: number; similarity: number } | null = null;
+
+  for (const link of links) {
+    const source = typeof link.source === 'string' ? link.source : (link.source as unknown as GraphNode).id;
+    const target = typeof link.target === 'string' ? link.target : (link.target as unknown as GraphNode).id;
+    let candidate: string | null = null;
+
+    if (source === nodeId && pathSet.has(target)) candidate = target;
+    else if (target === nodeId && pathSet.has(source)) candidate = source;
+
+    if (!candidate) continue;
+    const anchor = pathPositions.get(candidate);
+    if (!anchor) continue;
+
+    if (!best || link.similarity > best.similarity) {
+      best = { x: anchor.x, y: anchor.y, similarity: link.similarity };
+    }
+  }
+
+  return best ? { x: best.x, y: best.y } : null;
+}
+
+function getSeededNodePosition(
+  node: GraphNode,
+  index: number,
+  boundX: number,
+  boundY: number,
+  occupied: Array<{ x: number; y: number; r: number }>,
+  centerOverride?: { x: number; y: number }
+) {
+  const hw = getNodeHalfWidth(node.word);
+  const hh = 15;
+  const radius = hw + 18;
+  const center = centerOverride ?? getClusterCenter(node.chainSide);
+  const seedA = hashToUnit(`${node.id}-a`);
+  const seedB = hashToUnit(`${node.id}-b`);
+  const baseAngle = seedA * Math.PI * 2;
+  const baseRadius = 90 + seedB * 80 + Math.sqrt(index + 1) * 14;
+
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const angle = baseAngle + attempt * GOLDEN_ANGLE;
+    const spiral = baseRadius + attempt * 22;
+    const x = clamp(center.x + Math.cos(angle) * spiral, -boundX + hw, boundX - hw);
+    const y = clamp(center.y + Math.sin(angle) * spiral, -boundY + hh, boundY - hh);
+
+    const tooClose = occupied.some((item) => {
+      const dx = x - item.x;
+      const dy = y - item.y;
+      const minDist = radius + item.r + 12;
+      return dx * dx + dy * dy < minDist * minDist;
+    });
+
+    if (!tooClose) {
+      occupied.push({ x, y, r: radius });
+      return { x, y };
+    }
+  }
+
+  const fallbackX = clamp(center.x, -boundX + hw, boundX - hw);
+  const fallbackY = clamp(center.y, -boundY + hh, boundY - hh);
+  occupied.push({ x: fallbackX, y: fallbackY, r: radius });
+  return { x: fallbackX, y: fallbackY };
+}
 
 function getDynamicBounds(w: number, h: number, nodeCount: number) {
-  if (w === 0 || h === 0) return { boundX: 0, boundY: 0, minZoom: MIN_ZOOM };
-  const baseBoundX = (w / MIN_ZOOM) / 2;
-  const baseBoundY = (h / MIN_ZOOM) / 2;
+  if (w === 0 || h === 0) return { boundX: 0, boundY: 0, minZoom: 0.6 };
+
+  // Mobile check for more generous zooming out
+  const isMobile = w < 768;
+  const baseMinZoom = isMobile ? 0.35 : 0.6;
+
+  const baseBoundX = (w / baseMinZoom) / 2;
+  const baseBoundY = (h / baseMinZoom) / 2;
   const expansion = Math.max(1, Math.sqrt(nodeCount / 15));
   const boundX = Math.max(baseBoundX, 500) * expansion;
   const boundY = Math.max(baseBoundY, 500) * expansion;
-  const minZoom = Math.max(0.15, MIN_ZOOM / expansion);
+  const minZoom = Math.max(0.1, baseMinZoom / expansion);
   return { boundX, boundY, minZoom };
 }
 
@@ -130,6 +262,7 @@ export default function GraphCanvas({
   const fgRef = useRef<ForceGraphMethods>(undefined!);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const nodePositionCacheRef = useRef<Map<string, { x: number; y: number }>>(new Map());
 
   /* ---- Win animation state ---- */
   // How many nodes of the path have been revealed so far (0 = none, path.length = all)
@@ -138,6 +271,40 @@ export default function GraphCanvas({
   const [purpleProgress, setPurpleProgress] = useState(0);
   // Timestamp for pulsating glow
   const [animTime, setAnimTime] = useState(0);
+
+  const ready = dimensions.width > 0 && dimensions.height > 0;
+  const { minZoom } = getDynamicBounds(dimensions.width, dimensions.height, nodes.length);
+
+  // Reset position cache when starting a new puzzle (exactly 2 nodes)
+  useEffect(() => {
+    if (nodes.length <= 2) {
+      nodePositionCacheRef.current.clear();
+    }
+  }, [nodes.length]);
+
+  useEffect(() => {
+    const activeIds = new Set(nodes.map((n) => n.id));
+    for (const id of nodePositionCacheRef.current.keys()) {
+      if (!activeIds.has(id)) {
+        nodePositionCacheRef.current.delete(id);
+      }
+    }
+  }, [nodes]);
+
+  // Zoom to fit when graph is ready, nodes are loaded, or a new word is added
+  useEffect(() => {
+    if (ready && nodes.length > 0 && fgRef.current) {
+      // Small timeout to ensure d3 simulation has started and positions are available
+      const t = setTimeout(() => {
+        if (fgRef.current) {
+          // padding: 80 on desktop, 40 on mobile
+          const padding = dimensions.width < 768 ? 40 : 80;
+          fgRef.current.zoomToFit(600, padding);
+        }
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [ready, nodes.length, dimensions.width]);
 
   /* ---- Boyut izleme ---- */
   useEffect(() => {
@@ -238,32 +405,122 @@ export default function GraphCanvas({
     return null;
   }, [winAnimationPhase, winShortestPath, animRevealedSteps]);
 
+  const cacheLiveNodePositions = useCallback(() => {
+    const fg = fgRef.current as unknown as {
+      graphData?: () => { nodes?: Array<{ id?: string; x?: number; y?: number }> };
+    };
+    const data = fg?.graphData?.();
+    if (!data?.nodes || data.nodes.length === 0) return;
+
+    for (const n of data.nodes) {
+      if (!n || typeof n.id !== 'string') continue;
+      if (typeof n.x !== 'number' || typeof n.y !== 'number') continue;
+      nodePositionCacheRef.current.set(n.id, { x: n.x, y: n.y });
+    }
+  }, []);
+
   /* ---- Grafik verisi ----
      Başlangıç düğümlerinin pozisyonlarını sabitliyoruz (x: -200 ve x: 200).
      Kullanıcı bunları sürükleyemez. */
   const graphData = useMemo(() => ({
-    nodes: nodes.map((n) => {
-      if (n.type === 'start_a') return { ...n, fx: -300, fy: -150 };
-      if (n.type === 'start_b') return { ...n, fx: 300, fy: 150 };
-      return { ...n };
-    }),
+    nodes: (() => {
+      const { boundX, boundY } = getDynamicBounds(dimensions.width, dimensions.height, nodes.length);
+      const safeBoundX = boundX > 0 ? boundX : 500;
+      const safeBoundY = boundY > 0 ? boundY : 500;
+      const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+      const startA = nodes.find((n) => n.type === 'start_a')?.id;
+      const startB = nodes.find((n) => n.type === 'start_b')?.id;
+      const shortestPathSeed = startA && startB ? findShortestPath(startA, startB, links) : null;
+      const pathSet = new Set(shortestPathSeed ?? []);
+      const pathPositions = new Map<string, { x: number; y: number }>();
+
+      if (shortestPathSeed && shortestPathSeed.length > 1) {
+        const last = shortestPathSeed.length - 1;
+        shortestPathSeed.forEach((id, i) => {
+          if (i === 0) {
+            pathPositions.set(id, { x: -300, y: -150 });
+            return;
+          }
+          if (i === last) {
+            pathPositions.set(id, { x: 300, y: 150 });
+            return;
+          }
+
+          const node = nodeMap.get(id);
+          const hw = getNodeHalfWidth(node?.word ?? id);
+          const hh = 15;
+          const t = i / last;
+          const baseX = -300 + 600 * t;
+          const baseY = -150 + 300 * t;
+          const arcY = Math.sin(t * Math.PI) * 170;
+          const jitter = (hashToUnit(`${id}-path-jitter`) - 0.5) * 40;
+
+          pathPositions.set(id, {
+            x: clamp(baseX, -safeBoundX + hw, safeBoundX - hw),
+            y: clamp(baseY + arcY + jitter, -safeBoundY + hh, safeBoundY - hh),
+          });
+        });
+      }
+
+      const occupied: Array<{ x: number; y: number; r: number }> = [
+        { x: -300, y: -150, r: 80 },
+        { x: 300, y: 150, r: 80 },
+      ];
+
+      return nodes.map((n, index) => {
+        if (n.type === 'start_a') {
+          nodePositionCacheRef.current.set(n.id, { x: -300, y: -150 });
+          return { ...n, x: -300, y: -150, fx: -300, fy: -150 };
+        }
+        if (n.type === 'start_b') {
+          nodePositionCacheRef.current.set(n.id, { x: 300, y: 150 });
+          return { ...n, x: 300, y: 150, fx: 300, fy: 150 };
+        }
+
+        const cached = nodePositionCacheRef.current.get(n.id);
+        if (cached) {
+          occupied.push({ x: cached.x, y: cached.y, r: getNodeHalfWidth(n.word) + 18 });
+          return { ...n, x: cached.x, y: cached.y };
+        }
+
+        const pathPosition = pathPositions.get(n.id);
+        if (pathPosition) {
+          occupied.push({ x: pathPosition.x, y: pathPosition.y, r: getNodeHalfWidth(n.word) + 18 });
+          nodePositionCacheRef.current.set(n.id, pathPosition);
+          return { ...n, x: pathPosition.x, y: pathPosition.y };
+        }
+
+        const pathAnchor = getPathAnchorByLink(n.id, links, pathSet, pathPositions);
+
+        const seeded = getSeededNodePosition(
+          n,
+          index,
+          safeBoundX,
+          safeBoundY,
+          occupied,
+          pathAnchor ?? undefined
+        );
+        nodePositionCacheRef.current.set(n.id, seeded);
+        return { ...n, x: seeded.x, y: seeded.y };
+      });
+    })(),
     links: links.map((l) => ({ ...l })),
-  }), [nodes, links]);
+  }), [nodes, links, dimensions.width, dimensions.height]);
 
   /* ---- d3 kuvvet yapılandırması ---- */
   const applyForces = useCallback(() => {
     const fg = fgRef.current;
     if (!fg) return;
 
-    fg.d3Force('link')?.distance(() => MIN_LINK_DISTANCE);
-    fg.d3Force('charge', forceManyBody().strength(-150).distanceMax(150));
+    fg.d3Force('link')?.distance(() => MIN_LINK_DISTANCE + 25);
+    fg.d3Force('charge', forceManyBody().strength(-220).distanceMax(350));
     fg.d3Force('center', null);
 
     // Çarpışma: düğümler üst üste binmez
     fg.d3Force('collide',
       forceCollide<GraphNode & { x: number; y: number }>((node) =>
         getNodeHalfWidth(node.word) + 16
-      ).strength(0.9).iterations(4)
+      ).strength(1).iterations(6)
     );
 
     // Dinamik sınır kutusu
@@ -280,9 +537,8 @@ export default function GraphCanvas({
 
   // İlk mount sonrası da uygula (fgRef hazır olunca)
   const handleEngineStop = useCallback(() => {
-    // Sınır kutusu kuvveti (forceBoundingBox) sınırları koruduğu için
-    // burada ek bir işlem yapmamıza gerek kalmadı.
-  }, []);
+    cacheLiveNodePositions();
+  }, [cacheLiveNodePositions]);
 
 
   /* ---- Düğüm çizimi ---- */
@@ -498,8 +754,6 @@ export default function GraphCanvas({
     }
   }, [dimensions, nodes.length]);
 
-  const ready = dimensions.width > 0 && dimensions.height > 0;
-  const { minZoom } = getDynamicBounds(dimensions.width, dimensions.height, nodes.length);
 
   return (
     <div className="graph-container" ref={containerRef}>
@@ -516,18 +770,19 @@ export default function GraphCanvas({
           onNodeDrag={handleNodeDrag as unknown as (node: object, translate: { x: number; y: number }) => void}
           onNodeDragEnd={handleNodeDragEnd as unknown as (node: object, translate: { x: number; y: number }) => void}
           onEngineStop={handleEngineStop}
+          onEngineTick={cacheLiveNodePositions}
           onZoomEnd={handleZoomEnd as unknown as (transform: { k: number; x: number; y: number }) => void}
           width={dimensions.width}
           height={dimensions.height}
           backgroundColor="transparent"
           d3AlphaDecay={0.03}
           d3VelocityDecay={0.55}
-          cooldownTicks={150}
+          cooldownTicks={220}
           enableNodeDrag={true}
           enableZoomInteraction={true}
           enablePanInteraction={true}
           minZoom={minZoom}
-          maxZoom={2}
+          maxZoom={4}
         />
       )}
     </div>

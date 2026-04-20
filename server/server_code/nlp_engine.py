@@ -9,6 +9,8 @@ import random
 import numpy as np
 from common_words import COMMON_TURKISH_WORDS
 
+SIMILARITY_LINK_THRESHOLD = 27.5
+
 
 def load_vectors(csv_path: str) -> dict[str, np.ndarray]:
     """
@@ -76,7 +78,7 @@ def get_all_similarities(
             "word1": word,
             "word2": board_word,
             "similarity": sim,
-            "is_link": sim >= 27.5,
+            "is_link": sim >= SIMILARITY_LINK_THRESHOLD,
         })
 
     results.sort(key=lambda x: x["similarity"], reverse=True)
@@ -92,33 +94,8 @@ def pick_daily_pair(
     COMMON_TURKISH_WORDS listesinden, vektörleri mevcut olan kelimelerden
     kosinüs benzerliği %5'in altında olan rastgele bir çift seçer.
     """
-    # Vektörleri mevcut olan yaygın kelimeleri filtrele
-    available = [w for w in COMMON_TURKISH_WORDS if w in vectors]
-
-    if len(available) < 2:
-        # Yedek: tüm vektörlerden seç
-        available = list(vectors.keys())
-
     rng = random.Random(seed)
-
-    # Maksimum 500 deneme yap
-    for _ in range(500):
-        word_a, word_b = rng.sample(available, 2)
-        sim = cosine_similarity(vectors[word_a], vectors[word_b])
-        if sim < 5:
-            return (word_a, word_b)
-
-    # 500 denemede bulunamazsa, en düşük benzerliğe sahip çifti seç
-    best_pair = (available[0], available[1])
-    best_sim = 100.0
-    for _ in range(200):
-        word_a, word_b = rng.sample(available, 2)
-        sim = cosine_similarity(vectors[word_a], vectors[word_b])
-        if sim < best_sim:
-            best_sim = sim
-            best_pair = (word_a, word_b)
-
-    return best_pair
+    return _pick_pair(vectors, rng)
 
 
 def pick_practice_pair(
@@ -128,19 +105,25 @@ def pick_practice_pair(
     Pratik modu için rastgele bir çift seçer.
     Her çağrıda farklı bir çift döndürür (seed yok).
     """
+    rng = random.Random()  # Seed yok → her seferinde farklı
+    return _pick_pair(vectors, rng)
+
+
+def _pick_pair(vectors: dict[str, np.ndarray], rng: random.Random) -> tuple[str, str]:
+    """Vektör havuzundan birbirine uzak iki kelime seçer."""
     available = [w for w in COMMON_TURKISH_WORDS if w in vectors]
 
     if len(available) < 2:
         available = list(vectors.keys())
 
-    rng = random.Random()  # Seed yok → her seferinde farklı
-
+    # Maksimum 500 deneme yap
     for _ in range(500):
         word_a, word_b = rng.sample(available, 2)
         sim = cosine_similarity(vectors[word_a], vectors[word_b])
         if sim < 5:
             return (word_a, word_b)
 
+    # 500 denemede bulunamazsa, en düşük benzerliğe sahip çifti seç
     best_pair = (available[0], available[1])
     best_sim = 100.0
     for _ in range(200):
