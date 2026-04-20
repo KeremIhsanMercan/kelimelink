@@ -523,14 +523,30 @@ export function useGameState() {
             preWinChainSides: preWinSides,
           };
         });
-      } catch (err: unknown) {
+      } catch (err: any) {
         let message = 'Bir hata oluştu.';
-        if (err && typeof err === 'object' && 'response' in err) {
-          const resp = (err as { response?: { data?: { detail?: string } } }).response;
-          if (resp?.data?.detail) {
-            message = resp.data.detail;
+
+        // 1. Axios hatası mı kontrol et
+        if (err.response) {
+          // Sunucu bir hata kodu döndürdü (404, 400 vb.)
+          const serverDetail = err.response.data?.detail;
+
+          if (typeof serverDetail === 'string') {
+            message = serverDetail;
+          } else if (Array.isArray(serverDetail)) {
+            // FastAPI bazen validasyon hatalarını liste olarak döner
+            message = serverDetail[0]?.msg || 'Veri formatı hatalı.';
+          } else if (err.response.data?.message) {
+            message = err.response.data.message;
           }
+        } else if (err.request) {
+          // İstek yapıldı ama yanıt alınamadı (İnternet yok veya sunucu kapalı)
+          message = 'Sunucuya ulaşılamıyor. Lütfen internetinizi kontrol edin.';
+        } else {
+          // İstek kurulurken bir hata oluştu
+          message = err.message || message;
         }
+
         setState((prev) => ({ ...prev, isGuessing: false, error: message }));
       }
     },
