@@ -6,8 +6,9 @@ günlük bulmaca yönetimi yapar.
 """
 
 import os
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from contextlib import asynccontextmanager
+from collections import OrderedDict
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +17,14 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-from nlp_engine import load_vectors, cosine_similarity, get_all_similarities, pick_daily_pair, pick_practice_pair
+from nlp_engine import (
+    load_vectors,
+    build_normalized_vectors,
+    get_all_similarities_fast,
+    pick_daily_pair,
+    pick_practice_pair,
+    batch_similarities,
+)
 from database import init_tables, get_daily_puzzle, save_daily_puzzle, record_solve, get_today_stats
 
 load_dotenv()
@@ -27,6 +35,7 @@ load_dotenv()
 SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "27.5"))
 CSV_PATH = os.getenv("CSV_PATH", "../semantics_dataset/numberbatch_temiz.csv")
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+GUESS_CACHE_MAX_SIZE = int(os.getenv("GUESS_CACHE_MAX_SIZE", "5000"))
 
 
 # ---------------------------------------------------------------------------
@@ -43,6 +52,8 @@ async def lifespan(app: FastAPI):
 
     # Vektörleri yükle
     app.state.word_vectors = load_vectors(CSV_PATH)
+    app.state.normalized_vectors = build_normalized_vectors(app.state.word_vectors)
+    app.state.guess_cache = OrderedDict()
     print(f"[Sunucu] {len(app.state.word_vectors)} kelime vektörü bellekte hazır.")
     yield
     print("[Sunucu] Kapatılıyor...")
@@ -78,6 +89,12 @@ class SolveRequest(BaseModel):
     is_practice: bool = False
 
 
+class RebuildRequest(BaseModel):
+    word_a: str
+    word_b: str
+    guessed_words: list[str]
+
+
 def normalize_similarity_request(req: GuessRequest) -> tuple[str, list[str]]:
     word = req.word.strip().lower()
     board_words = [w.strip().lower() for w in req.board_words]
@@ -85,7 +102,7 @@ def normalize_similarity_request(req: GuessRequest) -> tuple[str, list[str]]:
 
 
 def build_similarity_response(word: str, board_words: list[str], word_vectors: dict):
-    similarities = get_all_similarities(word, board_words, word_vectors)
+    similarities = get_all_similarities_fast(word, board_words, word_vectors)
     links = [s for s in similarities if s["is_link"]]
 
     return {
@@ -94,6 +111,31 @@ def build_similarity_response(word: str, board_words: list[str], word_vectors: d
         "links": links,
         "has_links": len(links) > 0,
     }
+
+
+def canonical_board_words(word: str, board_words: list[str], vectors: dict[str, object]) -> tuple[str, ...]:
+    """Stable cache key from valid board words, independent from input ordering."""
+    return tuple(sorted({w for w in board_words if w != word and w in vectors}))
+
+
+def get_cached_similarity_response(request: Request, word: str, board_words: list[str]) -> dict:
+    normalized_vectors = request.app.state.normalized_vectors
+    cache: OrderedDict = request.app.state.guess_cache
+    cache_key = (word, canonical_board_words(word, board_words, normalized_vectors))
+
+    cached = cache.get(cache_key)
+    if cached is not None:
+        cache.move_to_end(cache_key)
+        return cached
+
+    response = build_similarity_response(word, list(cache_key[1]), normalized_vectors)
+    cache[cache_key] = response
+    cache.move_to_end(cache_key)
+
+    if len(cache) > GUESS_CACHE_MAX_SIZE:
+        cache.popitem(last=False)
+
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +153,11 @@ async def daily_puzzle(request: Request):
     Eğer bugün için bulmaca yoksa, yeni bir çift oluşturur.
     """
     word_vectors = request.app.state.word_vectors
-    today = date.today()
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    
+    # Bir sonraki gece yarısı (UTC)
+    next_puzzle_at = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     # Veritabanından kontrol et
     puzzle = get_daily_puzzle(today)
@@ -120,6 +166,8 @@ async def daily_puzzle(request: Request):
             "date": today.isoformat(),
             "word_a": puzzle["word_a"],
             "word_b": puzzle["word_b"],
+            "server_time": now.isoformat(),
+            "next_puzzle_at": next_puzzle_at.isoformat(),
         }
 
     # Yeni çift oluştur (tarih bazlı seed ile tekrarlanabilir)
@@ -136,6 +184,8 @@ async def daily_puzzle(request: Request):
         "date": today.isoformat(),
         "word_a": word_a,
         "word_b": word_b,
+        "server_time": now.isoformat(),
+        "next_puzzle_at": next_puzzle_at.isoformat(),
     }
 
 
@@ -175,13 +225,14 @@ async def guess(req: GuessRequest, request: Request):
             detail=f"'{word}' zaten tahtada mevcut.",
         )
 
-    return build_similarity_response(word, board_words, word_vectors)
+    return get_cached_similarity_response(request, word, board_words)
 
 
 @app.post("/api/solve")
 async def solve(req: SolveRequest, request: Request):
     """Anonim çözüm kaydeder. Pratik mod ise sabit tarihe (2003-05-26) kaydeder."""
-    target_date = date(2003, 5, 26) if req.is_practice else date.today()
+    now = datetime.now(timezone.utc)
+    target_date = date(2003, 5, 26) if req.is_practice else now.date()
     try:
         record_solve(target_date, req.guess_count)
     except Exception as e:
@@ -193,7 +244,8 @@ async def solve(req: SolveRequest, request: Request):
 @app.get("/api/stats")
 async def stats(request: Request):
     """Bugünün global istatistiklerini döndürür."""
-    today = date.today()
+    now = datetime.now(timezone.utc)
+    today = now.date()
     return get_today_stats(today)
 
 
@@ -213,7 +265,22 @@ async def similarities(req: GuessRequest, request: Request):
             detail=f"'{word}' kelimesi veritabanında bulunamadı.",
         )
 
-    return build_similarity_response(word, board_words, word_vectors)
+    return get_cached_similarity_response(request, word, board_words)
+
+
+@app.post("/api/rebuild-board")
+async def rebuild_board(req: RebuildRequest, request: Request):
+    """
+    Tüm board'u tek seferde yeniden hesaplar.
+    LocalStorage'dan yükleme yapılırken kullanılır.
+    """
+    word_vectors = request.app.state.word_vectors
+    all_words = [req.word_a, req.word_b] + req.guessed_words
+    
+    # NLP motorundan toplu hesaplama iste
+    result = batch_similarities(all_words, word_vectors)
+    
+    return result
 
 
 from fastapi import Path

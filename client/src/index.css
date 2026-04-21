@@ -1042,6 +1042,14 @@ body {
     margin: 0;
 }
 
+.info-modal__footer {
+    margin: -4px 0 24px;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-align: center;
+    font-weight: 500;
+}
+
 /* ============================================
    Profile Tabs
    ============================================ */

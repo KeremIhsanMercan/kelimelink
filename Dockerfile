@@ -1,14 +1,14 @@
 # Stage 1: Build the React frontend
-FROM node:20 AS frontend-builder
+FROM node:20-bookworm-slim AS frontend-builder
 WORKDIR /app/client
 COPY client/package*.json ./
-RUN npm install
+RUN npm ci
 COPY client/ ./
 # Use relative paths for API calls in the build
 RUN npm run build
 
 # Stage 2: Final image with Python backend and built frontend
-FROM python:3.11-slim
+FROM python:3.11.11-slim-bookworm
 
 # Set up user 1000 for Hugging Face Spaces compatibility
 RUN useradd -m -u 1000 user
@@ -18,11 +18,11 @@ ENV HOME=/home/user \
 
 WORKDIR $HOME/app
 
-# Install system dependencies (require root)
+# Apply latest security patches from Debian repositories.
 USER root
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    gcc \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 USER user
 
@@ -40,6 +40,7 @@ COPY --chown=user --from=frontend-builder /app/client/dist ./server/server_code/
 # Set environment variables
 ENV CSV_PATH="/home/user/app/server/semantics_dataset/numberbatch_temiz.csv"
 ENV PYTHONUNBUFFERED=1
+ENV WEB_CONCURRENCY=4
 
 WORKDIR $HOME/app/server/server_code
 
@@ -47,4 +48,4 @@ WORKDIR $HOME/app/server/server_code
 EXPOSE 7860
 
 # Run the application using Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port 7860 --workers ${WEB_CONCURRENCY:-4}"]

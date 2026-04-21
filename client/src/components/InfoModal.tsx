@@ -46,6 +46,10 @@ export default function InfoModal({ onClose }: InfoModalProps) {
           </div>
         </div>
 
+        <div className="info-modal__footer">
+          Öneri ve şikayetler için: krmhsnmrcn220@gmail.com
+        </div>
+
         <button className="profile-modal__close-btn" onClick={onClose}>
           Oyuna Başla
         </button>

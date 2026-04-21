@@ -17,6 +17,9 @@ interface SidebarProps {
   onAddWord: (word: string) => void;
   onSelectNode: (word: string) => void;
   gameMode: GameMode;
+  nextPuzzleAt: string | null;
+  serverOffset: number;
+  onTimerEnd?: () => void;
 }
 
 export default function Sidebar({
@@ -31,6 +34,9 @@ export default function Sidebar({
   onAddWord,
   onSelectNode,
   gameMode,
+  nextPuzzleAt,
+  serverOffset,
+  onTimerEnd,
 }: SidebarProps) {
   const [inputValue, setInputValue] = useState('');
   const [localWarning, setLocalWarning] = useState<string | null>(null);
@@ -45,10 +51,19 @@ export default function Sidebar({
   }, [isGuessing, isSolved]);
 
   useEffect(() => {
+    if (gameMode !== 'daily' || !nextPuzzleAt) return;
+
+    const target = new Date(nextPuzzleAt).getTime();
+
     const updateTimer = () => {
-      const now = new Date();
-      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      const diff = tomorrow.getTime() - now.getTime();
+      const now = Date.now() + serverOffset;
+      const diff = target - now;
+
+      if (diff <= 0) {
+        setTimeLeft('00:00:00');
+        if (onTimerEnd) onTimerEnd();
+        return;
+      }
 
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -62,7 +77,7 @@ export default function Sidebar({
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [gameMode, nextPuzzleAt]);
 
   useEffect(() => {
     if (scrollRef.current) {

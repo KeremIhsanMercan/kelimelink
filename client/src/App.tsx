@@ -38,6 +38,8 @@ export default function App() {
     switchToDaily,
     switchToPractice,
     startNewPracticeGame,
+    nextPuzzleAt,
+    serverOffset,
   } = useGameState();
 
 
@@ -176,6 +178,9 @@ export default function App() {
           onAddWord={addWord}
           onSelectNode={selectNode}
           gameMode={gameMode}
+          nextPuzzleAt={nextPuzzleAt}
+          serverOffset={serverOffset}
+          onTimerEnd={switchToDaily}
         />
         <GraphCanvas
           nodes={nodes}

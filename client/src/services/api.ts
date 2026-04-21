@@ -13,6 +13,8 @@ export interface DailyPuzzle {
   date: string;
   word_a: string;
   word_b: string;
+  server_time: string;
+  next_puzzle_at: string;
 }
 
 export interface SimilarityResult {
@@ -72,5 +74,19 @@ export async function recordSolve(guessCount: number, isPractice: boolean = fals
 
 export async function fetchStats(): Promise<GlobalStats> {
   const res = await api.get<GlobalStats>('/api/stats');
+  return res.data;
+}
+
+export interface RebuildResponse {
+  links: { word1: string; word2: string; similarity: number }[];
+  similarities: Record<string, SimilarityResult[]>;
+}
+
+export async function rebuildBoard(wordA: string, wordB: string, guessedWords: string[]): Promise<RebuildResponse> {
+  const res = await api.post<RebuildResponse>('/api/rebuild-board', {
+    word_a: wordA,
+    word_b: wordB,
+    guessed_words: guessedWords,
+  });
   return res.data;
 }

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { fetchDailyPuzzle, fetchPracticePuzzle, submitGuess, fetchSimilarities, recordSolve, type SimilarityResult } from '../services/api';
+import { fetchDailyPuzzle, fetchPracticePuzzle, submitGuess, fetchSimilarities, recordSolve, rebuildBoard, type SimilarityResult } from '../services/api';
 import { useLocalStorage } from './useLocalStorage';
 
 /* ============================================
@@ -43,6 +43,8 @@ export interface GameState {
   winAnimationPhase: WinAnimationPhase;
   winShortestPath: string[] | null;
   preWinChainSides: Record<string, GraphNode['chainSide']> | null;
+  nextPuzzleAt: string | null;
+  serverOffset: number; // milliseconds
 }
 
 interface BuildGameStateParams {
@@ -53,6 +55,8 @@ interface BuildGameStateParams {
   links?: GraphLink[];
   guessCount?: number;
   isSolved?: boolean;
+  nextPuzzleAt?: string | null;
+  serverOffset?: number;
 }
 
 function createBaseNodes(wordA: string, wordB: string): GraphNode[] {
@@ -70,6 +74,8 @@ function buildGameState({
   links = [],
   guessCount = 0,
   isSolved = false,
+  nextPuzzleAt = null,
+  serverOffset = 0,
 }: BuildGameStateParams): GameState {
   return {
     isLoading: false,
@@ -88,6 +94,8 @@ function buildGameState({
     winAnimationPhase: 'idle',
     winShortestPath: null,
     preWinChainSides: null,
+    nextPuzzleAt,
+    serverOffset,
   };
 }
 
@@ -179,6 +187,8 @@ export function useGameState() {
     winAnimationPhase: 'idle',
     winShortestPath: null,
     preWinChainSides: null,
+    nextPuzzleAt: null,
+    serverOffset: 0,
   });
 
   // Tüm benzerlik sonuçlarını sakla (her kelime için)
@@ -207,29 +217,29 @@ export function useGameState() {
   const rebuildSavedBoard = useCallback(
     async (wordA: string, wordB: string, guessedWords: string[]) => {
       const nodes: GraphNode[] = createBaseNodes(wordA, wordB);
-      const allWords = [wordA, wordB, ...guessedWords];
-      const links: GraphLink[] = [];
-
-      for (const guessedWord of guessedWords) {
-        nodes.push({ id: guessedWord, word: guessedWord, type: 'guessed', chainSide: 'none' });
-
-        const boardBefore = allWords.filter((w) => w !== guessedWord);
-        try {
-          const result = await submitGuess(guessedWord, boardBefore);
-          allSimilaritiesRef.current.set(guessedWord, result.similarities);
-          for (const link of result.links) {
-            links.push({
-              source: link.word1,
-              target: link.word2,
-              similarity: link.similarity,
-            });
-          }
-        } catch {
-          // Geri yüklemede tek bir kelimenin hatası oyunu engellemesin.
-        }
+      for (const word of guessedWords) {
+        nodes.push({ id: word, word: word, type: 'guessed', chainSide: 'none' });
       }
 
-      return { nodes, links };
+      try {
+        const result = await rebuildBoard(wordA, wordB, guessedWords);
+
+        // Benzerlik sonuçlarını cache'e doldur
+        for (const [word, sims] of Object.entries(result.similarities)) {
+          allSimilaritiesRef.current.set(word, sims);
+        }
+
+        const links: GraphLink[] = result.links.map((l) => ({
+          source: l.word1,
+          target: l.word2,
+          similarity: l.similarity,
+        }));
+
+        return { nodes, links };
+      } catch (err) {
+        console.error('Board rebuilding failed:', err);
+        return { nodes, links: [] };
+      }
     },
     []
   );
@@ -267,6 +277,8 @@ export function useGameState() {
       const updatedNodes = updateChainSides(nodes, links, puzzle.word_a, puzzle.word_b);
       hasRecordedWin.current = saved.isSolved;
 
+      const serverOffset = puzzle.server_time ? new Date(puzzle.server_time).getTime() - Date.now() : 0;
+
       return buildGameState({
         puzzleDate: puzzle.date,
         wordA: puzzle.word_a,
@@ -275,14 +287,19 @@ export function useGameState() {
         links,
         guessCount: saved.guessCount,
         isSolved: saved.isSolved,
+        nextPuzzleAt: puzzle.next_puzzle_at,
+        serverOffset,
       });
     }
 
     // Yeni oyun
+    const serverOffset = puzzle.server_time ? new Date(puzzle.server_time).getTime() - Date.now() : 0;
     return buildGameState({
       puzzleDate: puzzle.date,
       wordA: puzzle.word_a,
       wordB: puzzle.word_b,
+      nextPuzzleAt: puzzle.next_puzzle_at,
+      serverOffset,
     });
   }, [loadGameState, rebuildSavedBoard, updateChainSides]);
 
