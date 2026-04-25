@@ -78,8 +78,8 @@ export function useVsMode(username: string) {
           if (!hasResolved) {
             hasResolved = true;
             reject(new Error(data.message));
+            ws.close();
           }
-          ws.close();
         }
       };
       

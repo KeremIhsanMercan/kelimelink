@@ -266,7 +266,8 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
             msg_type = data.get("type")
             
             if msg_type == "start_game":
-                if room.status == "waiting" and len(room.players) >= 2:
+                is_host = room.all_players and room.all_players[0] == username
+                if room.status == "waiting" and len(room.all_players) >= 2 and is_host:
                     room.status = "playing"
                     
                     # Update DB and notify others
@@ -275,7 +276,7 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
                     
                     await room.broadcast({"type": "game_start"})
                     await room.broadcast(room.get_state_message())
-                elif len(room.players) < 2:
+                elif len(room.all_players) < 2:
                     await websocket.send_json({"type": "error", "message": "En az 2 oyuncu gerekiyor."})
                     
             elif msg_type == "solved":
@@ -296,7 +297,8 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
                     await room.broadcast(room.get_state_message())
             
             elif msg_type == "restart_game":
-                if room.players and room.players[0].websocket == websocket:
+                is_host = room.all_players and room.all_players[0] == username
+                if is_host:
                     word_a, word_b = data.get("word_a"), data.get("word_b")
                     word_vectors = websocket.app.state.word_vectors
                     custom_links_dict = websocket.app.state.custom_links_dict
