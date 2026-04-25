@@ -138,6 +138,7 @@ def init_tables():
                 word_b TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'waiting',
                 winner_info JSONB,
+                players JSONB DEFAULT '[]'::jsonb,
                 last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -185,6 +186,11 @@ def _run_migrations(cur):
     # custom_link_requests migration
     if not _column_exists(cur, "custom_link_requests", "username"):
         cur.execute("ALTER TABLE custom_link_requests ADD COLUMN username TEXT;")
+
+    # vs_rooms migration
+    if not _column_exists(cur, "vs_rooms", "players"):
+        cur.execute("ALTER TABLE vs_rooms ADD COLUMN players JSONB DEFAULT '[]'::jsonb;")
+        print("[DB] Migration: vs_rooms.players eklendi.")
 
 
 def get_daily_puzzle(today: date) -> dict | None:
@@ -302,11 +308,12 @@ def add_custom_link(word_a: str, word_b: str):
 # --- VS Mode DB Functions ---
 
 def db_create_vs_room(room_code: str, word_a: str, word_b: str):
+    import json
     with get_cursor() as cur:
         cur.execute(
             """
-            INSERT INTO vs_rooms (room_code, word_a, word_b, status, last_activity)
-            VALUES (%s, %s, %s, 'waiting', CURRENT_TIMESTAMP)
+            INSERT INTO vs_rooms (room_code, word_a, word_b, status, players, last_activity)
+            VALUES (%s, %s, %s, 'waiting', %s, CURRENT_TIMESTAMP)
             ON CONFLICT (room_code) DO UPDATE SET
                 word_a = EXCLUDED.word_a,
                 word_b = EXCLUDED.word_b,
@@ -314,17 +321,23 @@ def db_create_vs_room(room_code: str, word_a: str, word_b: str):
                 winner_info = NULL,
                 last_activity = CURRENT_TIMESTAMP
             """,
-            (room_code, word_a, word_b),
+            (room_code, word_a, word_b, json.dumps([])),
         )
 
 def db_get_vs_room(room_code: str) -> dict | None:
+    import json
     with get_cursor() as cur:
         cur.execute(
-            "SELECT room_code, word_a, word_b, status, winner_info FROM vs_rooms WHERE room_code = %s",
+            "SELECT room_code, word_a, word_b, status, winner_info, players FROM vs_rooms WHERE room_code = %s",
             (room_code,),
         )
         row = cur.fetchone()
-        return dict(row) if row else None
+        if row:
+            d = dict(row)
+            if isinstance(d.get("players"), str):
+                d["players"] = json.loads(d["players"])
+            return d
+        return None
 
 def db_update_vs_room_status(room_code: str, status: str, winner_info: dict | None = None, word_a: str | None = None, word_b: str | None = None):
     import json
@@ -344,6 +357,40 @@ def db_update_vs_room_status(room_code: str, status: str, winner_info: dict | No
         params.append(room_code)
         query = f"UPDATE vs_rooms SET {', '.join(updates)} WHERE room_code = %s"
         cur.execute(query, tuple(params))
+
+def db_add_player_to_room(room_code: str, username: str):
+    import json
+    with get_cursor() as cur:
+        # Using jsonb_set or || operator for efficient update
+        # We also handle duplicate addition (ON CONFLICT not applicable here, so we do it in logic or set)
+        cur.execute("SELECT players FROM vs_rooms WHERE room_code = %s", (room_code,))
+        row = cur.fetchone()
+        if not row: return
+        players = row["players"]
+        if isinstance(players, str): players = json.loads(players)
+        
+        if username not in players:
+            players.append(username)
+            cur.execute(
+                "UPDATE vs_rooms SET players = %s, last_activity = CURRENT_TIMESTAMP WHERE room_code = %s",
+                (json.dumps(players), room_code)
+            )
+
+def db_remove_player_from_room(room_code: str, username: str):
+    import json
+    with get_cursor() as cur:
+        cur.execute("SELECT players FROM vs_rooms WHERE room_code = %s", (room_code,))
+        row = cur.fetchone()
+        if not row: return
+        players = row["players"]
+        if isinstance(players, str): players = json.loads(players)
+        
+        if username in players:
+            players.remove(username)
+            cur.execute(
+                "UPDATE vs_rooms SET players = %s, last_activity = CURRENT_TIMESTAMP WHERE room_code = %s",
+                (json.dumps(players), room_code)
+            )
 
 def db_cleanup_vs_rooms(hours: int = 2):
     with get_cursor() as cur:

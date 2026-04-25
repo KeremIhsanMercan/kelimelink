@@ -27,7 +27,8 @@ class Room:
         self.room_code = room_code
         self.word_a = word_a
         self.word_b = word_b
-        self.players: List[Player] = []
+        self.players: List[Player] = [] # Local connections
+        self.all_players: List[str] = [] # Global list from DB
         self.status = "waiting" # waiting, playing, finished
         self.winner_info = None
         self.last_activity = time.time()
@@ -53,7 +54,7 @@ class Room:
             "status": self.status,
             "word_a": self.word_a,
             "word_b": self.word_b,
-            "players": [p.username for p in self.players],
+            "players": self.all_players if self.all_players else [p.username for p in self.players],
             "winner_info": self.winner_info
         }
 
@@ -68,7 +69,7 @@ def generate_room_code():
     chars = string.ascii_uppercase + string.digits
     for _ in range(100): # Limit attempts
         code = "".join(random.choices(chars, k=6))
-        if code not in rooms:
+        if code not in rooms and not db_get_vs_room(code):
             return code
     # Fallback if extremely crowded
     return "".join(random.choices(chars, k=8))
@@ -107,6 +108,7 @@ async def handle_db_notification(room_code: str):
         room.word_b = db_room["word_b"]
         room.status = db_room["status"]
         room.winner_info = db_room["winner_info"]
+        room.all_players = db_room.get("players", [])
         await room.broadcast(room.get_state_message())
 
 async def listen_for_updates():
@@ -202,7 +204,7 @@ async def create_vs_room(req: CreateRoomReq, request: Request):
     # Save to DB for other workers and cleanup old rooms to avoid background loop
     try:
         db_cleanup_vs_rooms(hours=1)
-        db_create_vs_room(room_code, word_a.strip().lower(), word_b.strip().lower())
+        db_create_vs_room(room_code, word_a.strip().lower(), word_b.strip().lower()) 
     except Exception as e:
         logger.error(f"[VS] DB Oda oluşturma hatası: {e}")
     
@@ -219,6 +221,7 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
             rooms[room_code] = Room(room_code, db_room["word_a"], db_room["word_b"])
             rooms[room_code].status = db_room["status"]
             rooms[room_code].winner_info = db_room["winner_info"]
+            rooms[room_code].all_players = db_room.get("players", [])
         else:
             await websocket.send_json({"type": "error", "message": "Oda bulunamadı."})
             await websocket.close()
@@ -232,6 +235,16 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
         
     player = Player(websocket, username)
     room.players.append(player)
+    
+    # Update DB player list and notify other workers
+    from database import db_add_player_to_room
+    db_add_player_to_room(room_code, username)
+    db_notify_room_update(room_code)
+
+    # Refresh all_players from DB to be sure
+    updated_db_room = db_get_vs_room(room_code)
+    if updated_db_room:
+        room.all_players = updated_db_room.get("players", [])
     
     # Start listening to DB only if we have active players on this worker
     await start_listening_task()
@@ -305,6 +318,11 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
         if player in room.players:
             room.players.remove(player)
         
+        # Remove from DB and notify others
+        from database import db_remove_player_from_room
+        db_remove_player_from_room(room_code, username)
+        db_notify_room_update(room_code)
+
         # Check if we should stop listening (no more active players on this worker)
         has_any_player = any(len(r.players) > 0 for r in rooms.values())
         if not has_any_player:
