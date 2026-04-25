@@ -235,6 +235,11 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
         await websocket.send_json({"type": "error", "message": "Oda dolu."})
         await websocket.close()
         return
+
+    if username in (room.all_players or []):
+        await websocket.send_json({"type": "error", "message": f"{username} isminde biri zaten odada. Lütfen başka bir isim seçin."})
+        await websocket.close()
+        return
         
     player = Player(websocket, username)
     room.players.append(player)
