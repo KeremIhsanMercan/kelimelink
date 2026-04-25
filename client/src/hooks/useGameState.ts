@@ -8,6 +8,7 @@ import { useLocalStorage } from './useLocalStorage';
 import type { 
   GraphNode, GraphLink 
 } from '../utils/graphUtils';
+export type { GraphNode, GraphLink };
 import { 
   updateChainSides, 
   bfs, buildAdjacency, findShortestPath 

@@ -52,7 +52,7 @@ function lerpColor(hex1: string, hex2: string, t: number): string {
 
 function getNodeColor(node: GraphNode, isOnPath: boolean, isSelected: boolean) {
   if (isOnPath) return COLORS.path;
-  const palette = isSelected ? COLORS_SELECTED : COLORS;
+  const palette: any = isSelected ? COLORS_SELECTED : COLORS;
   return palette[node.chainSide] ?? palette.none;
 }
 
@@ -61,7 +61,8 @@ function getAnimatedNodeColor(
   chainSide: GraphNode['chainSide'],
   purpleProgress: number
 ): { stroke: string; fill: string; text: string } {
-  const base = COLORS[chainSide] ?? COLORS.none;
+  const palette: any = COLORS;
+  const base = palette[chainSide] ?? COLORS.none;
   // Only shift blue (a) and red (b) nodes toward purple
   if (chainSide !== 'a' && chainSide !== 'b') return base;
   return {
