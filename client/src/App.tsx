@@ -201,6 +201,7 @@ export default function App() {
           serverOffset={serverOffset}
           onTimerEnd={switchToDaily}
           dailyRecordHolder={dailyRecordHolder}
+          username={username}
         />
         <GraphCanvas
           nodes={nodes}

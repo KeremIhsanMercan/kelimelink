@@ -1174,6 +1174,22 @@ html.dark .link-row--linked-path:hover {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.profile-distribution__chart::-webkit-scrollbar {
+    width: 4px;
+}
+
+.profile-distribution__chart::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.profile-distribution__chart::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 2px;
 }
 
 .profile-distribution__empty {

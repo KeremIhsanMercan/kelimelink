@@ -3,7 +3,6 @@ import type { SimilarityResult } from '../services/api';
 import { submitCustomLinkReport } from '../services/api';
 
 import type { GameMode, GraphNode } from '../hooks/useGameState';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import AdUnit from './AdUnit';
 import { Trophy, HelpCircle, Plus } from 'lucide-react';
 
@@ -30,6 +29,7 @@ interface SidebarProps {
     path: string | null;
     minGuesses: number;
   } | null;
+  username: string;
 }
 
 export default function Sidebar({
@@ -50,6 +50,7 @@ export default function Sidebar({
   serverOffset,
   onTimerEnd,
   dailyRecordHolder,
+  username,
 }: SidebarProps) {
   const [inputValue, setInputValue] = useState('');
   const [localWarning, setLocalWarning] = useState<string | null>(null);
@@ -58,7 +59,7 @@ export default function Sidebar({
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [showRecord, setShowRecord] = useState(false);
 
-  const { username } = useLocalStorage();
+  // const { username } = useLocalStorage(); // Artık prop olarak geliyor
 
   // Modal State
   const [reportModalOpen, setReportModalOpen] = useState(false);

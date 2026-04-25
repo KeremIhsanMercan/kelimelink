@@ -54,20 +54,20 @@ export async function fetchPracticePuzzle(): Promise<PracticePuzzle> {
   return res.data;
 }
 
-export async function submitGuess(word: string, boardWords: string[], username: string = ''): Promise<GuessResponse> {
+export async function submitGuess(word: string, boardWords: string[], username: string = 'Anonim'): Promise<GuessResponse> {
   const res = await api.post<GuessResponse>('/api/guess', {
     word,
     board_words: boardWords,
-    username,
+    username: username || 'Anonim',
   });
   return res.data;
 }
 
-export async function fetchSimilarities(word: string, boardWords: string[], username: string = ''): Promise<GuessResponse> {
+export async function fetchSimilarities(word: string, boardWords: string[], username: string = 'Anonim'): Promise<GuessResponse> {
   const res = await api.post<GuessResponse>('/api/similarities', {
     word,
     board_words: boardWords,
-    username,
+    username: username || 'Anonim',
   });
   return res.data;
 }
@@ -95,11 +95,11 @@ export async function rebuildBoard(wordA: string, wordB: string, guessedWords: s
   return res.data;
 }
 
-export async function submitCustomLinkReport(wordA: string, wordB: string, reason: string, username: string = ''): Promise<void> {
+export async function submitCustomLinkReport(wordA: string, wordB: string, reason: string, username: string = 'Anonim'): Promise<void> {
   await api.post('/api/custom-link-report', {
     word_a: wordA,
     word_b: wordB,
     reason: reason,
-    username: username,
+    username: username || 'Anonim',
   });
 }

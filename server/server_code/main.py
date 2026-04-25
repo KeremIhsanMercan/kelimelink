@@ -269,7 +269,8 @@ async def guess(req: GuessRequest, request: Request):
     # Log the guess in the requested format
     client_host = request.client.host if request.client else "unknown"
     client_port = request.client.port if request.client else 0
-    logger.info(f"{client_host}:{client_port} - \"POST /api/guess {req.username} {word} HTTP/1.1\" 200 OK")
+    display_name = req.username.strip() if req.username and req.username.strip() else "Anonim"
+    logger.info(f"{client_host}:{client_port} - \"POST /api/guess {display_name} {word} HTTP/1.1\" 200 OK")
 
     return get_cached_similarity_response(request, word, board_words)
 
@@ -296,7 +297,8 @@ async def solve(req: SolveRequest, request: Request):
             path_items[-1] = f"{path_items[-1]} (word B)"
         
         path_str = " -> ".join(path_items) if path_items else "No path"
-        logger.info(f"{client_host}:{client_port} - \"POST /api/solve {req.username} [{req.gamemode}] {path_str} HTTP/1.1\" 200 OK")
+        display_name = req.username.strip() if req.username and req.username.strip() else "Anonim"
+        logger.info(f"{client_host}:{client_port} - \"POST /api/solve {display_name} [{req.gamemode}] {path_str} HTTP/1.1\" 200 OK")
         
     except Exception as e:
         logger.error(f"[Sunucu] Çözüm kaydetme hatası: {e}")
@@ -362,7 +364,8 @@ async def custom_link_report(req: CustomLinkReport, request: Request):
         
         client_host = request.client.host if request.client else "unknown"
         client_port = request.client.port if request.client else 0
-        logger.info(f"{client_host}:{client_port} - \"POST /api/custom-link-report {req.username} {req.word_a} {req.word_b} HTTP/1.1\" 200 OK")
+        display_name = req.username.strip() if req.username and req.username.strip() else "Anonim"
+        logger.info(f"{client_host}:{client_port} - \"POST /api/custom-link-report {display_name} {req.word_a} {req.word_b} HTTP/1.1\" 200 OK")
         
         return {"status": "ok"}
     except Exception as e:

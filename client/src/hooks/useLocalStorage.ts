@@ -108,10 +108,18 @@ export function useLocalStorage() {
 
   // Kullanıcı adı yönetimi
   const [username, setUsernameState] = useState<string>(() => {
-    const saved = localStorage.getItem(USERNAME_KEY);
-    if (saved) return saved;
+    try {
+      const saved = localStorage.getItem(USERNAME_KEY);
+      if (saved && saved.trim()) return saved;
+    } catch (e) {
+      // localStorage erişimi engellenmiş olabilir
+    }
     const generated = generateUsername();
-    localStorage.setItem(USERNAME_KEY, generated);
+    try {
+      localStorage.setItem(USERNAME_KEY, generated);
+    } catch (e) {
+      // localStorage yazma hatası
+    }
     return generated;
   });
 
