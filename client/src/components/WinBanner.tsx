@@ -11,9 +11,11 @@ interface WinBannerProps {
   gameMode: GameMode;
   onClose: () => void;
   onNewPractice?: () => void;
+  isVsHost?: boolean;
+  onNewVsGame?: () => void;
 }
 
-export default function WinBanner({ guessCount, stats, practiceStats, gameMode, onClose, onNewPractice }: WinBannerProps) {
+export default function WinBanner({ guessCount, stats, practiceStats, gameMode, onClose, onNewPractice, isVsHost, onNewVsGame }: WinBannerProps) {
   const isPractice = gameMode === 'practice';
   const practiceAverage = practiceStats
     ? computeAverageFromDistribution(practiceStats.guessDistribution).toFixed(1)
@@ -71,6 +73,11 @@ export default function WinBanner({ guessCount, stats, practiceStats, gameMode, 
         </div>
 
         <div className="win-banner__actions">
+          {isVsHost && onNewVsGame && (
+            <button className="win-banner__new-game" style={{ background: '#10b981' }} onClick={onNewVsGame}>
+              Yeni Oyun
+            </button>
+          )}
           {isPractice && onNewPractice && (
             <button className="win-banner__new-game" onClick={onNewPractice}>
               Yeni Pratik Oyun

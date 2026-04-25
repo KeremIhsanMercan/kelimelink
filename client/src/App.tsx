@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info } from 'lucide-react';
+import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
 import { useDarkMode } from './hooks/useDarkMode';
+import { useVsMode } from './hooks/useVsMode';
 import GraphCanvas from './components/GraphCanvas';
 import Sidebar from './components/Sidebar';
 import WinBanner from './components/WinBanner';
@@ -9,6 +10,10 @@ import ProfileModal from './components/ProfileModal';
 import InfoModal from './components/InfoModal';
 import UsernameBadge from './components/UsernameBadge';
 import AdUnit from './components/AdUnit';
+import VsModeModal from './components/VsModeModal';
+import VsRoomModal from './components/VsRoomModal';
+import VsGameOverModal from './components/VsGameOverModal';
+import VsRematchModal from './components/VsRematchModal';
 import './index.css';
 
 export default function App() {
@@ -41,10 +46,21 @@ export default function App() {
     startNewPracticeGame,
     nextPuzzleAt,
     serverOffset,
+    vsStats,
+    recordVsGame,
     username,
     setUsername,
     dailyRecordHolder,
+    startVsGame,
+    resetVsGame,
+    loadBoard,
   } = useGameState();
+
+  const vsMode = useVsMode(username);
+  const [showVsModal, setShowVsModal] = useState(false);
+  const [showVsGameOverModal, setShowVsGameOverModal] = useState(false);
+  const [showVsRematchModal, setShowVsRematchModal] = useState(false);
+  const [hasSeenGameOver, setHasSeenGameOver] = useState(false);
 
 
   const { isDark, toggleDarkMode } = useDarkMode();
@@ -87,6 +103,56 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const shortestPath = isSolved ? getShortestPath() : null;
+
+  // Sync VsMode logic
+  useEffect(() => {
+    if (vsMode.status === 'playing' && vsMode.wordA && vsMode.wordB) {
+      // If we are transitioning to playing, we must ensure startVsGame is called
+      // even if we are already in 'vs' gameMode (rematch case)
+      startVsGame(vsMode.wordA, vsMode.wordB);
+      setShowVsModal(false);
+      setShowVsRematchModal(false);
+      setShowVsGameOverModal(false);
+      setHasSeenGameOver(false);
+    }
+  }, [vsMode.status, vsMode.wordA, vsMode.wordB, startVsGame]);
+
+  useEffect(() => {
+    if (vsMode.status === 'waiting' && gameMode === 'vs') {
+      setShowVsGameOverModal(false);
+      setShowVsRematchModal(false);
+      setHasSeenGameOver(false);
+      resetVsGame();
+    }
+  }, [vsMode.status, gameMode, resetVsGame]);
+
+  useEffect(() => {
+    if (vsMode.status === 'finished' && !hasSeenGameOver && gameMode === 'vs') {
+      const didWin = vsMode.winnerInfo?.username === username;
+      recordVsGame(didWin, didWin ? vsMode.winnerInfo?.guesses : undefined);
+      
+      if (vsMode.winnerInfo?.username !== username) {
+        setShowVsGameOverModal(true);
+      }
+      setHasSeenGameOver(true);
+    }
+  }, [vsMode.status, gameMode, hasSeenGameOver, vsMode.winnerInfo, username, recordVsGame]);
+
+  useEffect(() => {
+    if (gameMode === 'vs' && isSolved && vsMode.status === 'playing') {
+      vsMode.sendSolved(guessCount, shortestPath || [], nodes, links);
+    }
+  }, [isSolved, gameMode, vsMode, guessCount, shortestPath, nodes, links]);
+
+  // Load winner board manually
+  const loadWinnerBoard = () => {
+    if (vsMode.winnerInfo) {
+      loadBoard(vsMode.winnerInfo.nodes, vsMode.winnerInfo.links, true, vsMode.winnerInfo.guesses);
+      setShowVsGameOverModal(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="loading-screen">
@@ -105,8 +171,6 @@ export default function App() {
       </div>
     );
   }
-
-  const shortestPath = isSolved ? getShortestPath() : null;
 
   // Disable input during the win animation highlighting phase
   const inputDisabled = winAnimationPhase === 'highlighting';
@@ -139,8 +203,39 @@ export default function App() {
             {isDark ? <Sun size={20} /> : <Moon size={20} />}
           </button>
           <button
+            className={`app-header__action-btn ${vsMode.status !== 'disconnected' ? 'app-header__action-btn--active' : ''} ${vsMode.status === 'finished' && vsMode.players[0] === username ? 'app-header__action-btn--text' : ''}`}
+            onClick={() => {
+              if (vsMode.status === 'disconnected') {
+                setShowVsModal(true);
+              } else if ((vsMode.status === 'finished' || vsMode.status === 'waiting') && vsMode.players[0] === username) {
+                setShowVsRematchModal(true);
+              }
+            }}
+            aria-label="VS Modu"
+            title="VS Modu"
+          >
+            {(vsMode.status === 'finished' || vsMode.status === 'waiting') && vsMode.players[0] === username ? (
+              <>
+                <Users size={20} className="app-header__action-btn-icon--mobile" />
+                <span className="app-header__action-btn-text--desktop" style={{ fontSize: '12px', fontFamily: 'Arial', fontWeight: 'bold', whiteSpace: 'nowrap', padding: '0 2px' }}>
+                  {vsMode.status === 'waiting' ? 'Kelimeler' : 'Yeni Oyun'}
+                </span>
+              </>
+            ) : (
+              <Users size={20} />
+            )}
+          </button>
+          <button
             className={`app-header__action-btn ${gameMode === 'practice' ? 'app-header__action-btn--active' : ''}`}
-            onClick={gameMode === 'practice' ? switchToDaily : switchToPractice}
+            onClick={() => {
+              if (gameMode === 'practice') {
+                switchToDaily();
+              } else {
+                // Leave vs room if in vs mode, then start practice
+                if (gameMode === 'vs') vsMode.leaveRoom();
+                switchToPractice();
+              }
+            }}
             aria-label={gameMode === 'practice' ? 'Günlük Bulmacaya Dön' : 'Pratik Modu'}
             title={gameMode === 'practice' ? 'Günlük Bulmacaya Dön' : 'Pratik Modu'}
           >
@@ -150,7 +245,7 @@ export default function App() {
               <Swords size={20} />
             )}
           </button>
-          {gameMode === 'practice' && (
+          {(gameMode === 'practice') && (
             <button
               className="app-header__action-btn app-header__action-btn--new-game"
               onClick={startNewPracticeGame}
@@ -189,7 +284,7 @@ export default function App() {
           shortestPath={shortestPath}
           nodeCount={nodes.length}
           guessCount={guessCount}
-          isSolved={isSolved || inputDisabled}
+          isSolved={isSolved || inputDisabled || (gameMode === 'vs' && vsMode.status === 'finished')}
           isGuessing={isGuessing}
           error={error}
           selectedNode={selectedNode}
@@ -202,6 +297,7 @@ export default function App() {
           onTimerEnd={switchToDaily}
           dailyRecordHolder={dailyRecordHolder}
           username={username}
+          vsWinnerUsername={gameMode === 'vs' && vsMode.status === 'finished' ? (vsMode.winnerInfo?.username ?? null) : null}
         />
         <GraphCanvas
           nodes={nodes}
@@ -217,8 +313,8 @@ export default function App() {
         />
       </main>
 
-      {/* Kazanma Bannerı */}
-      {showWinBanner && (
+      {/* Kazanma Bannerı - vs modunda sadece kazanan için göster */}
+      {showWinBanner && !(gameMode === 'vs' && vsMode.winnerInfo?.username !== username) && (
         <WinBanner
           guessCount={guessCount}
           stats={gameMode === 'daily' ? stats : undefined}
@@ -226,7 +322,8 @@ export default function App() {
           gameMode={gameMode}
           onClose={closeWinBanner}
           onNewPractice={gameMode === 'practice' ? startNewPracticeGame : undefined}
-
+          isVsHost={gameMode === 'vs' && vsMode.players[0] === username}
+          onNewVsGame={() => setShowVsRematchModal(true)}
         />
       )}
 
@@ -235,6 +332,7 @@ export default function App() {
         <ProfileModal
           stats={stats}
           practiceStats={practiceStats}
+          vsStats={vsStats}
           gameMode={gameMode}
           onClose={() => setShowProfile(false)}
         />
@@ -244,6 +342,49 @@ export default function App() {
       {showInfo && (
         <InfoModal
           onClose={() => setShowInfo(false)}
+        />
+      )}
+
+      {/* VS Modals */}
+      {showVsModal && vsMode.status === 'disconnected' && (
+        <VsModeModal
+          onClose={() => { vsMode.clearError(); setShowVsModal(false); }}
+          onCreateRoom={(a, b) => vsMode.createRoom(a, b)}
+          onJoinRoom={(code) => vsMode.joinRoom(code)}
+          vsError={vsMode.error}
+          onClearVsError={vsMode.clearError}
+        />
+      )}
+
+      {(vsMode.status === 'waiting' || (vsMode.status === 'finished' && !isSolved)) && vsMode.roomCode && (
+        <VsRoomModal
+          roomCode={vsMode.roomCode}
+          wordA={vsMode.wordA}
+          wordB={vsMode.wordB}
+          players={vsMode.players}
+          isHost={vsMode.players[0] === username}
+          status={vsMode.status as 'waiting' | 'finished'}
+          onStartGame={vsMode.startGame}
+          onLeave={vsMode.leaveRoom}
+        />
+      )}
+
+      {showVsGameOverModal && vsMode.winnerInfo && (
+        <VsGameOverModal
+          winnerInfo={vsMode.winnerInfo}
+          onClose={() => setShowVsGameOverModal(false)}
+          onViewWinnerBoard={loadWinnerBoard}
+          isHost={vsMode.players[0] === username}
+          onNewGame={() => setShowVsRematchModal(true)}
+        />
+      )}
+
+      {showVsRematchModal && (
+        <VsRematchModal
+          onClose={() => setShowVsRematchModal(false)}
+          onRestart={(a, b) => vsMode.restartGame(a, b)}
+          vsError={vsMode.error}
+          onClearVsError={vsMode.clearError}
         />
       )}
 

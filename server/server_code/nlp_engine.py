@@ -7,23 +7,20 @@ import csv
 import os
 import random
 import numpy as np
-from common_words import COMMON_TURKISH_WORDS
-from custom_links import CUSTOM_SEMANTIC_LINKS
-
 import hashlib
+from common_words import COMMON_TURKISH_WORDS
+from config import SIMILARITY_THRESHOLD
 
-SIMILARITY_LINK_THRESHOLD = 26
-
-def check_custom_link(word1: str, word2: str) -> float | None:
+def check_custom_link(word1: str, word2: str, custom_links_dict: dict[str, list[str]]) -> float | None:
     """
     Checks if there's a custom semantic link between two words.
     Returns a deterministic pseudo-random similarity score between 45.0 and 55.0
     if a link exists, otherwise None.
     """
     has_link = False
-    if word1 in CUSTOM_SEMANTIC_LINKS and word2 in CUSTOM_SEMANTIC_LINKS[word1]:
+    if word1 in custom_links_dict and word2 in custom_links_dict[word1]:
         has_link = True
-    elif word2 in CUSTOM_SEMANTIC_LINKS and word1 in CUSTOM_SEMANTIC_LINKS[word2]:
+    elif word2 in custom_links_dict and word1 in custom_links_dict[word2]:
         has_link = True
         
     if has_link:
@@ -49,25 +46,28 @@ def build_normalized_vectors(vectors: dict[str, np.ndarray]) -> dict[str, np.nda
 
 def load_vectors(csv_path: str) -> dict[str, np.ndarray]:
     """
-    numberbatch_temiz.csv dosyasını belleğe yükler.
-    Dönüş: {kelime: np.array(300,)} sözlüğü
+    Vektör dosyasını belleğe yükler.
     """
     vectors: dict[str, np.ndarray] = {}
     abs_path = os.path.abspath(csv_path)
     print(f"[NLP] Vektörler yükleniyor: {abs_path}")
 
-    with open(abs_path, "r", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            if len(row) < 2:
-                continue
-            word = row[0].strip().lower()
-            try:
-                vec = np.array([float(x) for x in row[1:]], dtype=np.float32)
-                if vec.shape[0] == 300:
-                    vectors[word] = vec
-            except (ValueError, IndexError):
-                continue
+    try:
+        with open(abs_path, "r", encoding="utf-8-sig") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if len(row) < 2:
+                    continue
+                word = row[0].strip().lower()
+                try:
+                    vec = np.array([float(x) for x in row[1:]], dtype=np.float32)
+                    if vec.shape[0] == 300:
+                        vectors[word] = vec
+                except (ValueError, IndexError):
+                    continue
+    except FileNotFoundError:
+        print(f"[NLP] HATA: Vektör dosyası bulunamadı: {abs_path}")
+        return {}
 
     print(f"[NLP] {len(vectors)} kelime yüklendi.")
     return vectors
@@ -83,55 +83,14 @@ def cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
     if norm_a == 0 or norm_b == 0:
         return 0.0
     similarity = dot / (norm_a * norm_b)
-    # Yüzdeye çevir (0-100)
     return round(float(similarity) * 100, 1)
-
-
-def get_all_similarities(
-    word: str,
-    board_words: list[str],
-    vectors: dict[str, np.ndarray],
-) -> list[dict]:
-    """
-    Tahmin edilen kelimenin tahtadaki tüm kelimelerle benzerlik skorlarını hesaplar.
-    Dönüş: [{word1, word2, similarity, is_link}] listesi, skorlara göre azalan sırada.
-    """
-    word_vec = vectors.get(word)
-    results = []
-
-    for board_word in board_words:
-        if board_word == word:
-            continue
-            
-        custom_sim = check_custom_link(word, board_word)
-        if custom_sim is not None:
-            results.append({
-                "word1": word,
-                "word2": board_word,
-                "similarity": custom_sim,
-                "is_link": True,
-            })
-            continue
-
-        if word_vec is None or board_word not in vectors:
-            continue
-
-        sim = cosine_similarity(word_vec, vectors[board_word])
-        results.append({
-            "word1": word,
-            "word2": board_word,
-            "similarity": sim,
-            "is_link": sim >= SIMILARITY_LINK_THRESHOLD,
-        })
-
-    results.sort(key=lambda x: x["similarity"], reverse=True)
-    return results
 
 
 def get_all_similarities_fast(
     word: str,
     board_words: list[str],
     normalized_vectors: dict[str, np.ndarray],
+    custom_links_dict: dict[str, list[str]],
 ) -> list[dict]:
     """
     Fast path for similarity calculations using pre-normalized vectors.
@@ -146,7 +105,7 @@ def get_all_similarities_fast(
         if board_word == word:
             continue
             
-        custom_sim = check_custom_link(word, board_word)
+        custom_sim = check_custom_link(word, board_word, custom_links_dict)
         if custom_sim is not None:
             results.append({
                 "word1": word,
@@ -176,7 +135,7 @@ def get_all_similarities_fast(
                 "word1": word,
                 "word2": board_word,
                 "similarity": sim,
-                "is_link": sim >= SIMILARITY_LINK_THRESHOLD,
+                "is_link": sim >= SIMILARITY_THRESHOLD,
             })
 
     results.sort(key=lambda x: x["similarity"], reverse=True)
@@ -185,47 +144,52 @@ def get_all_similarities_fast(
 
 def pick_daily_pair(
     vectors: dict[str, np.ndarray],
+    custom_links_dict: dict[str, list[str]],
     seed: int | None = None,
 ) -> tuple[str, str]:
     """
     Günlük bulmaca için iki uzak kelime seçer.
-    COMMON_TURKISH_WORDS listesinden, vektörleri mevcut olan kelimelerden
-    kosinüs benzerliği %5'in altında olan rastgele bir çift seçer.
     """
     rng = random.Random(seed)
-    return _pick_pair(vectors, rng)
+    return _pick_pair(vectors, custom_links_dict, rng)
 
 
 def pick_practice_pair(
     vectors: dict[str, np.ndarray],
+    custom_links_dict: dict[str, list[str]],
 ) -> tuple[str, str]:
     """
     Pratik modu için rastgele bir çift seçer.
-    Her çağrıda farklı bir çift döndürür (seed yok).
     """
-    rng = random.Random()  # Seed yok → her seferinde farklı
-    return _pick_pair(vectors, rng)
+    rng = random.Random()
+    return _pick_pair(vectors, custom_links_dict, rng)
 
 
-def _pick_pair(vectors: dict[str, np.ndarray], rng: random.Random) -> tuple[str, str]:
+def _pick_pair(vectors: dict[str, np.ndarray], custom_links_dict: dict[str, list[str]], rng: random.Random) -> tuple[str, str]:
     """Vektör havuzundan birbirine uzak iki kelime seçer."""
     available = [w for w in COMMON_TURKISH_WORDS if w in vectors]
 
     if len(available) < 2:
         available = list(vectors.keys())
 
-    # Maksimum 500 deneme yap
+    # Try to find a pair with similarity < 0%
     for _ in range(500):
         word_a, word_b = rng.sample(available, 2)
+        if check_custom_link(word_a, word_b, custom_links_dict) is not None:
+            continue
+            
         sim = cosine_similarity(vectors[word_a], vectors[word_b])
-        if sim < 5:
+        if sim < 0.0: # Match documentation "below 0%"
             return (word_a, word_b)
 
-    # 500 denemede bulunamazsa, en düşük benzerliğe sahip çifti seç
+    # Fallback: Find the pair with lowest similarity in 200 random samples
     best_pair = (available[0], available[1])
     best_sim = 100.0
     for _ in range(200):
         word_a, word_b = rng.sample(available, 2)
+        if check_custom_link(word_a, word_b, custom_links_dict) is not None:
+            continue
+            
         sim = cosine_similarity(vectors[word_a], vectors[word_b])
         if sim < best_sim:
             best_sim = sim
@@ -237,23 +201,18 @@ def _pick_pair(vectors: dict[str, np.ndarray], rng: random.Random) -> tuple[str,
 def batch_similarities(
     words: list[str],
     vectors: dict[str, np.ndarray],
+    custom_links_dict: dict[str, list[str]],
 ) -> dict:
     """
     Verilen tüm kelimelerin birbirleriyle olan benzerliklerini hesaplar.
-    Dönüş: {
-        "links": [{"word1", "word2", "similarity"}],
-        "similarities": { "word": [{"word1", "word2", "similarity", "is_link"}] }
-    }
     """
     unique_words = list(set(words))
-    # Kelimenin vektörü olmasa bile custom linki olabilir, o yüzden valid_words'ü biraz daha geniş tutalım
-    valid_words = [w for w in unique_words if w in vectors or w in CUSTOM_SEMANTIC_LINKS or any(w in v for v in CUSTOM_SEMANTIC_LINKS.values())]
+    # Kelimenin vektörü olmasa bile custom linki olabilir
+    valid_words = [w for w in unique_words if w in vectors or w in custom_links_dict or any(w in v for v in custom_links_dict.values())]
     
     links = []
-    # word -> list of similarity results
     sim_map = {w: [] for w in valid_words}
     
-    # Pairwise comparison
     for i in range(len(valid_words)):
         w1 = valid_words[i]
         v1 = vectors.get(w1)
@@ -261,7 +220,7 @@ def batch_similarities(
             w2 = valid_words[j]
             v2 = vectors.get(w2)
             
-            custom_sim = check_custom_link(w1, w2)
+            custom_sim = check_custom_link(w1, w2, custom_links_dict)
             if custom_sim is not None:
                 sim = custom_sim
                 is_link = True
@@ -269,7 +228,7 @@ def batch_similarities(
                 if v1 is None or v2 is None:
                     continue
                 sim = cosine_similarity(v1, v2)
-                is_link = sim >= SIMILARITY_LINK_THRESHOLD
+                is_link = sim >= SIMILARITY_THRESHOLD
             
             res1 = {"word1": w1, "word2": w2, "similarity": sim, "is_link": is_link}
             res2 = {"word1": w2, "word2": w1, "similarity": sim, "is_link": is_link}
@@ -280,7 +239,6 @@ def batch_similarities(
             if is_link:
                 links.append({"word1": w1, "word2": w2, "similarity": sim})
                 
-    # Her kelime için sonuçları sırala
     for w in sim_map:
         sim_map[w].sort(key=lambda x: x["similarity"], reverse=True)
         

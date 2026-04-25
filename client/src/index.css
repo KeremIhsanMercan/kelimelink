@@ -60,6 +60,7 @@
     --color-banner-bg-end: #f5f3ff;
     --color-banner-border: #e0d7fa;
     --color-banner-text: var(--color-word-both);
+    --vs-code-padding: 44px;
 }
 
 /* ============================================
@@ -799,6 +800,12 @@ html.dark .link-row--linked-path:hover {
     background: var(--color-word-both);
 }
 
+.app-header__action-btn--text {
+    width: auto;
+    min-width: 38px;
+    padding: 0 12px;
+}
+
 .app-header__action-btn--new-game {
     border-color: var(--color-success);
     color: var(--color-success);
@@ -809,6 +816,10 @@ html.dark .link-row--linked-path:hover {
     border-color: var(--color-success);
     color: white;
     background: var(--color-success);
+}
+
+.app-header__action-btn-icon--mobile {
+    display: none;
 }
 
 /* ============================================
@@ -928,6 +939,10 @@ html.dark .link-row--linked-path:hover {
 
 .profile-stats-grid--daily {
     grid-template-columns: repeat(4, 1fr);
+}
+
+.profile-stats-grid--practice {
+    grid-template-columns: repeat(2, 1fr);
 }
 
 .profile-stat-card {
@@ -1424,9 +1439,41 @@ html.dark .link-row--linked-path:hover {
     background: linear-gradient(30deg, #0083cf, #ed4f00);
 }
 
+/* VS distribution bar variant */
+.profile-dist-row__bar--vs {
+    background: linear-gradient(30deg, #5affc8, #008a5e);
+}
+
 /* ============================================
    Win Banner Actions
    ============================================ */
+
+/* ============================================
+   Profile Modal Utilities
+   ============================================ */
+
+.profile-modal__avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-word-a-bg);
+    color: var(--color-word-a);
+    flex-shrink: 0;
+    transition: all var(--transition-fast);
+}
+
+.profile-modal__avatar--vs {
+    background: var(--color-word-both-light);
+    color: var(--color-word-both);
+}
+
+.profile-modal__avatar--success {
+    background: var(--color-success-light);
+    color: var(--color-success);
+}
 
 .win-banner__actions {
     display: flex;
@@ -1554,11 +1601,49 @@ html.dark .link-row--linked-path:hover {
     .app-header__action-btn {
         width: 32px;
         height: 32px;
+        padding: 0 !important;
+        /* Reset padding for mobile */
     }
 
     .app-header__action-btn svg {
         width: 16px;
         height: 16px;
+    }
+
+    .app-header__action-btn-text--desktop {
+        display: none;
+    }
+
+    .app-header__action-btn-icon--mobile {
+        display: block !important;
+    }
+
+    .app-header__action-btn--text {
+        width: 32px;
+        /* Fixed width on mobile */
+        min-width: 32px;
+    }
+
+    .profile-modal__avatar {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .profile-modal__avatar svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .profile-modal__title {
+        font-size: 1.1rem !important;
+    }
+
+    .profile-modal__content p {
+        font-size: 0.85rem !important;
+    }
+
+    :root {
+        --vs-code-padding: 24px;
     }
 
     .practice-banner {
@@ -1783,9 +1868,17 @@ html.dark {
    ============================================ */
 
 @keyframes glowAnimation {
-    0% { box-shadow: 0 0 4px rgba(59, 130, 246, 0.3); }
-    50% { box-shadow: 0 0 12px rgba(59, 130, 246, 0.5), 0 0 16px rgba(59, 130, 246, 0.3); }
-    100% { box-shadow: 0 0 4px rgba(59, 130, 246, 0.3); }
+    0% {
+        box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.5), 0 0 16px rgba(59, 130, 246, 0.3);
+    }
+
+    100% {
+        box-shadow: 0 0 4px rgba(59, 130, 246, 0.3);
+    }
 }
 
 .has-glow {

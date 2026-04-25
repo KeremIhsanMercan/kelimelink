@@ -1,4 +1,4 @@
-import { Info, X, Sparkles, User, Link2, Palette, ArrowLeft } from 'lucide-react';
+import { Info, X, Sparkles, User, Link2, Palette, ArrowLeft, Users } from 'lucide-react';
 import { useState } from 'react';
 
 interface InfoModalProps {
@@ -58,6 +58,13 @@ export default function InfoModal({ onClose }: InfoModalProps) {
                   <div className="new-feature-content">
                     <h4>Renklendirilmiş Listeler</h4>
                     <p>Yan paneldeki kelimeler, eklendikleri düğümün rengini (mavi, kırmızı, gri) alarak ağ yapısını çok daha iyi anlamanızı sağlar.</p>
+                  </div>
+                </li>
+                <li>
+                  <div className="new-feature-icon"><Users size={20} /></div>
+                  <div className="new-feature-content">
+                    <h4>Yeni Oyun Modu: VS</h4>
+                    <p>Oda kur, arkadaşlarını davet et ve en hızlı kim bağlayacak gör!</p>
                   </div>
                 </li>
               </ul>

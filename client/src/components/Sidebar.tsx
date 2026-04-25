@@ -30,6 +30,7 @@ interface SidebarProps {
     minGuesses: number;
   } | null;
   username: string;
+  vsWinnerUsername?: string | null;
 }
 
 export default function Sidebar({
@@ -51,6 +52,7 @@ export default function Sidebar({
   onTimerEnd,
   dailyRecordHolder,
   username,
+  vsWinnerUsername,
 }: SidebarProps) {
   const [inputValue, setInputValue] = useState('');
   const [localWarning, setLocalWarning] = useState<string | null>(null);
@@ -265,8 +267,12 @@ export default function Sidebar({
                 gap: '6px',
               }}
             >
-              <Trophy size={16} /> Bulmaca çözüldü!
-              {gameMode === 'daily' && (
+              {vsWinnerUsername && vsWinnerUsername !== username ? (
+                <><Trophy size={16} /> {vsWinnerUsername} kazandı!</>
+              ) : (
+                <><Trophy size={16} /> Bulmaca çözüldü!</>
+              )}
+              {gameMode === 'daily' && !vsWinnerUsername && (
                 <button
                   className="record-hint-btn"
                   onClick={() => setShowRecord((prev) => !prev)}

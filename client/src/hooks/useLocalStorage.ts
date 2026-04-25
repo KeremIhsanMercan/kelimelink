@@ -32,10 +32,17 @@ export interface PracticeStats {
   guessDistribution: Record<number, number>;
 }
 
+export interface VsStats {
+  gamesPlayed: number;
+  gamesWon: number;
+  guessDistribution: Record<number, number>;
+}
+
 const GAME_STATE_KEY = 'kelimelink-game-state';
 const STATS_KEY = 'kelimelink-stats';
 const PRACTICE_STATS_KEY = 'kelimelink-practice-stats';
 const PRACTICE_GAME_STATE_KEY = 'kelimelink-practice-game-state';
+const VS_STATS_KEY = 'kelimelink-vs-stats';
 const USERNAME_KEY = 'kelimelink-username';
 
 function generateUsername(): string {
@@ -88,6 +95,12 @@ const DEFAULT_PRACTICE_STATS: PracticeStats = {
   guessDistribution: {},
 };
 
+const DEFAULT_VS_STATS: VsStats = {
+  gamesPlayed: 0,
+  gamesWon: 0,
+  guessDistribution: {},
+};
+
 export function useLocalStorage() {
   const [stats, setStats] = useState<PlayerStats>(() =>
     loadFromStorage(STATS_KEY, DEFAULT_STATS)
@@ -95,6 +108,10 @@ export function useLocalStorage() {
 
   const [practiceStats, setPracticeStats] = useState<PracticeStats>(() =>
     loadFromStorage(PRACTICE_STATS_KEY, DEFAULT_PRACTICE_STATS)
+  );
+
+  const [vsStats, setVsStats] = useState<VsStats>(() =>
+    loadFromStorage(VS_STATS_KEY, DEFAULT_VS_STATS)
   );
 
   // İstatistikleri güncelle
@@ -105,6 +122,10 @@ export function useLocalStorage() {
   useEffect(() => {
     saveToStorage(PRACTICE_STATS_KEY, practiceStats);
   }, [practiceStats]);
+
+  useEffect(() => {
+    saveToStorage(VS_STATS_KEY, vsStats);
+  }, [vsStats]);
 
   // Kullanıcı adı yönetimi
   const [username, setUsernameState] = useState<string>(() => {
@@ -207,6 +228,23 @@ export function useLocalStorage() {
     });
   }, []);
 
+  /**
+   * VS modu istatistiklerini günceller.
+   */
+  const recordVsGame = useCallback((didWin: boolean, guessCount?: number): void => {
+    setVsStats((prev) => {
+      const next = { ...prev };
+      next.gamesPlayed += 1;
+      if (didWin) {
+        next.gamesWon += 1;
+        if (guessCount !== undefined) {
+          next.guessDistribution = incrementGuessDistribution(next.guessDistribution, guessCount);
+        }
+      }
+      return next;
+    });
+  }, []);
+
   return {
     stats,
     practiceStats,
@@ -219,6 +257,8 @@ export function useLocalStorage() {
     clearPracticeGameState,
     recordWin,
     recordPracticeWin,
+    vsStats,
+    recordVsGame,
   };
 
 }

@@ -9,22 +9,32 @@ from datetime import date, datetime
 from contextlib import contextmanager
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from dotenv import load_dotenv
+from psycopg2.pool import ThreadedConnectionPool
+from config import DATABASE_URL, DB_MIN_CONNECTIONS, DB_MAX_CONNECTIONS
 
-load_dotenv()
+# Global connection pool
+_pool = None
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/kelimelink")
-
-
-def get_connection():
-    """Yeni bir veritabanı bağlantısı oluşturur."""
-    return psycopg2.connect(DATABASE_URL)
+def get_pool():
+    global _pool
+    if _pool is None:
+        try:
+            _pool = ThreadedConnectionPool(
+                DB_MIN_CONNECTIONS, 
+                DB_MAX_CONNECTIONS, 
+                DATABASE_URL
+            )
+        except Exception as e:
+            print(f"[DB] Havuz oluşturulamadı: {e}")
+            raise
+    return _pool
 
 
 @contextmanager
 def get_cursor():
-    """Bağlantı ve imleç yönetimi için context manager."""
-    conn = get_connection()
+    """Bağlantı havuzundan bağlantı ve imleç yönetimi için context manager."""
+    pool = get_pool()
+    conn = pool.getconn()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             yield cur
@@ -33,7 +43,7 @@ def get_cursor():
         conn.rollback()
         raise
     finally:
-        conn.close()
+        pool.putconn(conn)
 
 
 def _column_exists(cur, table: str, column: str) -> bool:
@@ -56,7 +66,10 @@ def _constraint_exists(cur, table: str, constraint_name: str) -> bool:
 
 def _drop_all_constraints_of_type(cur, table: str, con_type: str):
     """Belirtilen tipteki tüm constraint'leri kaldırır (u=unique, p=primary key)."""
-    cur.execute("""
+    # SQL Injection prevention: Use a safer approach by avoiding string formatting directly for identifiers.
+    # PostgreSQL doesn't allow identifiers as parameters, so we use a PL/pgSQL block with quote_ident.
+    
+    query = """
         DO $$
         DECLARE
             r RECORD;
@@ -64,33 +77,27 @@ def _drop_all_constraints_of_type(cur, table: str, con_type: str):
             FOR r IN
                 SELECT conname
                 FROM pg_constraint
-                WHERE conrelid = '{table}'::regclass
-                  AND contype = '{con_type}'
+                WHERE conrelid = %s::regclass
+                  AND contype = %s
             LOOP
-                EXECUTE 'ALTER TABLE {table} DROP CONSTRAINT ' || r.conname;
+                EXECUTE 'ALTER TABLE ' || quote_ident(%s) || ' DROP CONSTRAINT ' || quote_ident(r.conname);
             END LOOP;
         END $$;
-    """.format(table=table, con_type=con_type))
+    """
+    cur.execute(query, (table, con_type, table))
 
 
 def init_tables():
     """Gerekli tabloları oluşturur (yoksa) ve mevcut tabloları migrate eder."""
     with get_cursor() as cur:
-        # ------------------------------------------------------------------
-        # daily_puzzles: puzzle_date doğal primary key
-        # ------------------------------------------------------------------
+        # Schema definition
         cur.execute("""
             CREATE TABLE IF NOT EXISTS daily_puzzles (
                 puzzle_date DATE PRIMARY KEY,
                 word_a TEXT NOT NULL,
                 word_b TEXT NOT NULL
             );
-        """)
-
-        # ------------------------------------------------------------------
-        # global_stats: (puzzle_date, gamemode) bileşik primary key
-        # ------------------------------------------------------------------
-        cur.execute("""
+            
             CREATE TABLE IF NOT EXISTS global_stats (
                 puzzle_date DATE NOT NULL,
                 gamemode TEXT NOT NULL DEFAULT 'daily',
@@ -101,87 +108,70 @@ def init_tables():
                 min_guesses_path TEXT,
                 PRIMARY KEY (puzzle_date, gamemode)
             );
-        """)
 
-        # ------------------------------------------------------------------
-        # custom_link_requests: kullanıcıların bağlantı önerilerini tutar
-        # ------------------------------------------------------------------
-        cur.execute("""
             CREATE TABLE IF NOT EXISTS custom_link_requests (
                 id SERIAL PRIMARY KEY,
                 word_a TEXT NOT NULL,
                 word_b TEXT NOT NULL,
                 reason TEXT NOT NULL,
                 username TEXT
-            );        """)
+            );
 
-        # ==================================================================
-        # Migration: mevcut tabloları yeni şemaya uyumlu hale getir
-        # ==================================================================
+            CREATE TABLE IF NOT EXISTS custom_links (
+                id SERIAL PRIMARY KEY,
+                word_a TEXT NOT NULL,
+                word_b TEXT NOT NULL,
+                UNIQUE (word_a, word_b)
+            );
+        """)
 
-        # --- global_stats migration ---
+        # Migration logic
+        _run_migrations(cur)
 
-        # 1. gamemode sütunu ekle (yoksa)
-        if not _column_exists(cur, "global_stats", "gamemode"):
-            cur.execute("ALTER TABLE global_stats ADD COLUMN gamemode TEXT NOT NULL DEFAULT 'daily';")
-            print("[DB] Migration: global_stats.gamemode sütunu eklendi.")
+    print("[DB] Tablolar ve veritabanı hazır.")
 
-        # 2. id sütununu kaldır (varsa) — önce PK constraint'i düşür
-        if _column_exists(cur, "global_stats", "id"):
-            _drop_all_constraints_of_type(cur, "global_stats", "p")
-            cur.execute("ALTER TABLE global_stats DROP COLUMN id;")
-            print("[DB] Migration: global_stats.id sütunu kaldırıldı.")
 
-        # 3. updated_at sütununu kaldır (varsa)
-        if _column_exists(cur, "global_stats", "updated_at"):
-            cur.execute("ALTER TABLE global_stats DROP COLUMN updated_at;")
-            print("[DB] Migration: global_stats.updated_at sütunu kaldırıldı.")
+def _run_migrations(cur):
+    """Mevcut tabloları yeni şemaya uyumlu hale getirir."""
+    # global_stats migration
+    if not _column_exists(cur, "global_stats", "gamemode"):
+        cur.execute("ALTER TABLE global_stats ADD COLUMN gamemode TEXT NOT NULL DEFAULT 'daily';")
+        print("[DB] Migration: global_stats.gamemode eklendi.")
 
-        # 4. Eski unique constraint'leri kaldır
-        _drop_all_constraints_of_type(cur, "global_stats", "u")
+    if _column_exists(cur, "global_stats", "id"):
+        _drop_all_constraints_of_type(cur, "global_stats", "p")
+        cur.execute("ALTER TABLE global_stats DROP COLUMN id;")
+        print("[DB] Migration: global_stats.id kaldırıldı.")
 
-        # 5. (puzzle_date, gamemode) primary key'i garantile
-        if not _constraint_exists(cur, "global_stats", "global_stats_pkey"):
-            cur.execute("ALTER TABLE global_stats ADD PRIMARY KEY (puzzle_date, gamemode);")
-            print("[DB] Migration: global_stats PK (puzzle_date, gamemode) eklendi.")
+    if _column_exists(cur, "global_stats", "updated_at"):
+        cur.execute("ALTER TABLE global_stats DROP COLUMN updated_at;")
 
-        # 6. min_guesses_username sütunu ekle (yoksa)
-        if not _column_exists(cur, "global_stats", "min_guesses_username"):
-            cur.execute("ALTER TABLE global_stats ADD COLUMN min_guesses_username TEXT;")
-            print("[DB] Migration: global_stats.min_guesses_username sütunu eklendi.")
+    _drop_all_constraints_of_type(cur, "global_stats", "u")
 
-        # 7. min_guesses_path sütunu ekle (yoksa)
-        if not _column_exists(cur, "global_stats", "min_guesses_path"):
-            cur.execute("ALTER TABLE global_stats ADD COLUMN min_guesses_path TEXT;")
-            print("[DB] Migration: global_stats.min_guesses_path sütunu eklendi.")
+    if not _constraint_exists(cur, "global_stats", "global_stats_pkey"):
+        cur.execute("ALTER TABLE global_stats ADD PRIMARY KEY (puzzle_date, gamemode);")
 
-        # --- daily_puzzles migration ---
+    for col in ["min_guesses_username", "min_guesses_path"]:
+        if not _column_exists(cur, "global_stats", col):
+            cur.execute(f"ALTER TABLE global_stats ADD COLUMN {col} TEXT;")
 
-        # 1. id sütununu kaldır (varsa) — önce PK constraint'i düşür
-        if _column_exists(cur, "daily_puzzles", "id"):
-            _drop_all_constraints_of_type(cur, "daily_puzzles", "p")
-            _drop_all_constraints_of_type(cur, "daily_puzzles", "u")
-            cur.execute("ALTER TABLE daily_puzzles DROP COLUMN id;")
-            cur.execute("ALTER TABLE daily_puzzles ADD PRIMARY KEY (puzzle_date);")
-            print("[DB] Migration: daily_puzzles.id kaldırıldı, PK puzzle_date oldu.")
+    # daily_puzzles migration
+    if _column_exists(cur, "daily_puzzles", "id"):
+        _drop_all_constraints_of_type(cur, "daily_puzzles", "p")
+        _drop_all_constraints_of_type(cur, "daily_puzzles", "u")
+        cur.execute("ALTER TABLE daily_puzzles DROP COLUMN id;")
+        cur.execute("ALTER TABLE daily_puzzles ADD PRIMARY KEY (puzzle_date);")
 
-        # 2. created_at sütununu kaldır (varsa)
-        if _column_exists(cur, "daily_puzzles", "created_at"):
-            cur.execute("ALTER TABLE daily_puzzles DROP COLUMN created_at;")
-            print("[DB] Migration: daily_puzzles.created_at sütunu kaldırıldı.")
+    if _column_exists(cur, "daily_puzzles", "created_at"):
+        cur.execute("ALTER TABLE daily_puzzles DROP COLUMN created_at;")
 
-        # --- custom_link_requests migration ---
-        if not _column_exists(cur, "custom_link_requests", "username"):
-            cur.execute("ALTER TABLE custom_link_requests ADD COLUMN username TEXT;")
-        
-        if _column_exists(cur, "custom_link_requests", "created_at"):
-            cur.execute("ALTER TABLE custom_link_requests DROP COLUMN created_at;")
-
-    print("[DB] Tablolar hazır.")
+    # custom_link_requests migration
+    if not _column_exists(cur, "custom_link_requests", "username"):
+        cur.execute("ALTER TABLE custom_link_requests ADD COLUMN username TEXT;")
 
 
 def get_daily_puzzle(today: date) -> dict | None:
-    """Bugünün bulmacasını getirir (varsa)."""
+    """Bugünün bulmacasını getirir."""
     with get_cursor() as cur:
         cur.execute(
             "SELECT word_a, word_b FROM daily_puzzles WHERE puzzle_date = %s",
@@ -202,11 +192,10 @@ def save_daily_puzzle(today: date, word_a: str, word_b: str):
             """,
             (today, word_a, word_b),
         )
-    print(f"[DB] Günlük bulmaca kaydedildi: {word_a} - {word_b}")
 
 
 def record_solve(today: date, guess_count: int, gamemode: str = "daily", username: str | None = None, path: str | None = None):
-    """Anonim çözüm kaydeder ve istatistikleri günceller. Yeni rekor ise kullanıcı adı ve yolu saklar."""
+    """Çözüm kaydeder ve istatistikleri günceller."""
     with get_cursor() as cur:
         cur.execute(
             """
@@ -266,4 +255,29 @@ def save_custom_link_request(word_a: str, word_b: str, reason: str, username: st
             """,
             (word_a, word_b, reason, username),
         )
-    print(f"[DB] Özel bağlantı isteği kaydedildi: {word_a} - {word_b} (User: {username})")
+
+
+def get_all_custom_links() -> dict[str, list[str]]:
+    """Tüm aktif özel bağlantıları bir sözlük olarak döndürür."""
+    links_dict = {}
+    with get_cursor() as cur:
+        cur.execute("SELECT word_a, word_b FROM custom_links")
+        for row in cur.fetchall():
+            wa, wb = row["word_a"], row["word_b"]
+            if wa not in links_dict:
+                links_dict[wa] = []
+            links_dict[wa].append(wb)
+    return links_dict
+
+
+def add_custom_link(word_a: str, word_b: str):
+    """Yeni bir özel bağlantı ekler."""
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO custom_links (word_a, word_b)
+            VALUES (%s, %s)
+            ON CONFLICT (word_a, word_b) DO NOTHING
+            """,
+            (word_a, word_b),
+        )
