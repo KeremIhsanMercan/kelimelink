@@ -35,16 +35,21 @@ export function useVsMode(username: string) {
   const connect = useCallback((code: string) => {
     if (wsRef.current) wsRef.current.close();
     
-    // Check if in dev or prod
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    
-    // In dev, Vite is on 5173, backend on 8000. For production, they are same host.
-    let host = window.location.host;
-    if (host.includes('localhost:5173') || host.includes('127.0.0.1:5173')) {
-      host = host.replace('5173', '8000');
+    const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+    let wsBase: string;
+
+    if (API_BASE) {
+      wsBase = API_BASE.replace('http:', 'ws:').replace('https:', 'wss:');
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      let host = window.location.host;
+      if (host.includes('localhost:5173') || host.includes('127.0.0.1:5173')) {
+        host = host.replace('5173', '8000');
+      }
+      wsBase = `${protocol}//${host}`;
     }
 
-    const wsUrl = `${protocol}//${host}/api/ws/vs/${code}?username=${encodeURIComponent(username)}`;
+    const wsUrl = `${wsBase}/api/ws/vs/${code}?username=${encodeURIComponent(username)}`;
     
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -92,12 +97,21 @@ export function useVsMode(username: string) {
 
   const createRoom = useCallback(async (wordA?: string, wordB?: string) => {
     try {
-      let host = window.location.host;
-      let protocol = window.location.protocol;
-      if (host.includes('localhost:5173') || host.includes('127.0.0.1:5173')) {
-        host = host.replace('5173', '8000');
+      const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+      let url: string;
+
+      if (API_BASE) {
+        url = `${API_BASE}/api/vs/create`;
+      } else {
+        let host = window.location.host;
+        let protocol = window.location.protocol;
+        if (host.includes('localhost:5173') || host.includes('127.0.0.1:5173')) {
+          host = host.replace('5173', '8000');
+        }
+        url = `${protocol}//${host}/api/vs/create`;
       }
-      const res = await fetch(`${protocol}//${host}/api/vs/create`, {
+
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word_a: wordA || null, word_b: wordB || null })
