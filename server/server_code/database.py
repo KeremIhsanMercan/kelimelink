@@ -39,6 +39,14 @@ def get_cursor():
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             yield cur
             conn.commit()
+    except (psycopg2.OperationalError, psycopg2.InterfaceError):
+        # Connection is dead, try to get a new one once
+        conn.rollback()
+        pool.putconn(conn, close=True)
+        conn = pool.getconn()
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            yield cur
+            conn.commit()
     except Exception:
         conn.rollback()
         raise
@@ -122,6 +130,15 @@ def init_tables():
                 word_a TEXT NOT NULL,
                 word_b TEXT NOT NULL,
                 UNIQUE (word_a, word_b)
+            );
+
+            CREATE TABLE IF NOT EXISTS vs_rooms (
+                room_code TEXT PRIMARY KEY,
+                word_a TEXT NOT NULL,
+                word_b TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'waiting',
+                winner_info JSONB,
+                last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
 
@@ -281,3 +298,60 @@ def add_custom_link(word_a: str, word_b: str):
             """,
             (word_a, word_b),
         )
+
+# --- VS Mode DB Functions ---
+
+def db_create_vs_room(room_code: str, word_a: str, word_b: str):
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO vs_rooms (room_code, word_a, word_b, status, last_activity)
+            VALUES (%s, %s, %s, 'waiting', CURRENT_TIMESTAMP)
+            ON CONFLICT (room_code) DO UPDATE SET
+                word_a = EXCLUDED.word_a,
+                word_b = EXCLUDED.word_b,
+                status = 'waiting',
+                winner_info = NULL,
+                last_activity = CURRENT_TIMESTAMP
+            """,
+            (room_code, word_a, word_b),
+        )
+
+def db_get_vs_room(room_code: str) -> dict | None:
+    with get_cursor() as cur:
+        cur.execute(
+            "SELECT room_code, word_a, word_b, status, winner_info FROM vs_rooms WHERE room_code = %s",
+            (room_code,),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+def db_update_vs_room_status(room_code: str, status: str, winner_info: dict | None = None, word_a: str | None = None, word_b: str | None = None):
+    import json
+    with get_cursor() as cur:
+        updates = ["status = %s", "last_activity = CURRENT_TIMESTAMP"]
+        params = [status]
+        if winner_info is not None:
+            updates.append("winner_info = %s")
+            params.append(json.dumps(winner_info))
+        if word_a is not None:
+            updates.append("word_a = %s")
+            params.append(word_a)
+        if word_b is not None:
+            updates.append("word_b = %s")
+            params.append(word_b)
+        
+        params.append(room_code)
+        query = f"UPDATE vs_rooms SET {', '.join(updates)} WHERE room_code = %s"
+        cur.execute(query, tuple(params))
+
+def db_cleanup_vs_rooms(hours: int = 2):
+    with get_cursor() as cur:
+        cur.execute(
+            "DELETE FROM vs_rooms WHERE last_activity < CURRENT_TIMESTAMP - INTERVAL '%s hours'",
+            (hours,),
+        )
+
+def db_notify_room_update(room_code: str):
+    with get_cursor() as cur:
+        cur.execute("SELECT pg_notify('vs_room_updates', %s)", (room_code,))

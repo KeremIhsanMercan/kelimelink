@@ -10,9 +10,10 @@ interface VsRoomModalProps {
   status: 'waiting' | 'finished';
   onStartGame: () => void;
   onLeave: () => void;
+  isLoading: boolean;
 }
 
-export default function VsRoomModal({ roomCode, wordA, wordB, players, isHost, status, onStartGame, onLeave }: VsRoomModalProps) {
+export default function VsRoomModal({ roomCode, wordA, wordB, players, isHost, status, onStartGame, onLeave, isLoading }: VsRoomModalProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -89,11 +90,25 @@ export default function VsRoomModal({ roomCode, wordA, wordB, players, isHost, s
             <>
               <button
                 onClick={onStartGame}
-                disabled={players.length < 2 || !isHost}
-                style={{ fontFamily: 'inherit', marginTop: '24px', width: '100%', padding: '14px', background: (!isHost || players.length < 2) ? 'var(--color-text-muted)' : 'var(--color-word-both)', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 'bold', fontSize: '16px', cursor: (!isHost || players.length < 2) ? 'not-allowed' : 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)' }}
+                disabled={players.length < 2 || !isHost || isLoading}
+                className="vs-btn vs-btn--purple"
+                style={{ 
+                    marginTop: '24px', 
+                    fontSize: '16px', 
+                    padding: '14px',
+                    background: (!isHost || players.length < 2) ? 'var(--color-text-muted)' : undefined,
+                    boxShadow: '0 4px 6px -1px rgba(165, 121, 241, 0.2)',
+                    opacity: isLoading ? 0.8 : 1
+                }}
               >
-                <Play size={18} fill="white" />
-                Oyunu Başlat
+                {isLoading ? (
+                  <div className="loading-spinner loading-spinner--small" />
+                ) : (
+                  <>
+                    <Play size={18} fill="white" />
+                    Oyunu Başlat
+                  </>
+                )}
               </button>
               {!isHost ? (
                 <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', textAlign: 'center', marginTop: '8px' }}>Sadece kurucu başlatabilir</p>

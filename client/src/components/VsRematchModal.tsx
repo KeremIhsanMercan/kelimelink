@@ -6,9 +6,10 @@ interface VsRematchModalProps {
   onRestart: (wordA: string, wordB: string) => void;
   vsError: string | null;
   onClearVsError: () => void;
+  isLoading: boolean;
 }
 
-export default function VsRematchModal({ onClose, onRestart, vsError, onClearVsError }: VsRematchModalProps) {
+export default function VsRematchModal({ onClose, onRestart, vsError, onClearVsError, isLoading }: VsRematchModalProps) {
   const [wordA, setWordA] = useState('');
   const [wordB, setWordB] = useState('');
 
@@ -58,10 +59,18 @@ export default function VsRematchModal({ onClose, onRestart, vsError, onClearVsE
             {vsError && <div style={{ color: '#dc2626', fontSize: '13px', textAlign: 'center' }}>{vsError}</div>}
             <button
               onClick={handleRestart}
-              style={{ fontFamily: 'inherit', marginTop: '4px', padding: '12px', background: '#10b981', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', width: '100%' }}
+              disabled={isLoading}
+              className="vs-btn vs-btn--success"
+              style={{ marginTop: '4px' }}
             >
-              <RefreshCw size={18} />
-              Oyunu Başlat
+              {isLoading ? (
+                <div className="loading-spinner loading-spinner--small" />
+              ) : (
+                <>
+                  <RefreshCw size={18} />
+                  Oyunu Başlat
+                </>
+              )}
             </button>
           </div>
         </div>

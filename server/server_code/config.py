@@ -18,7 +18,7 @@ GUESS_CACHE_MAX_SIZE = int(os.getenv("GUESS_CACHE_MAX_SIZE", "5000"))
 
 # Database Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/kelimelink")
-DB_MIN_CONNECTIONS = int(os.getenv("DB_MIN_CONNECTIONS", "1"))
+DB_MIN_CONNECTIONS = int(os.getenv("DB_MIN_CONNECTIONS", "0"))
 DB_MAX_CONNECTIONS = int(os.getenv("DB_MAX_CONNECTIONS", "10"))
 
 # CORS Configuration

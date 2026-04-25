@@ -7,6 +7,12 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, HTTPException
 
+import psycopg2
+from database import (
+    db_create_vs_room, db_get_vs_room, db_update_vs_room_status, 
+    db_cleanup_vs_rooms, db_notify_room_update
+)
+
 logger = logging.getLogger("kelimelink")
 
 router = APIRouter()
@@ -89,6 +95,50 @@ def validate_words(word_a: str, word_b: str, word_vectors, custom_links_dict):
             return "Girdiğiniz kelimeler zaten doğrudan bağlantılı."
     return None
 
+async def handle_db_notification(room_code: str):
+    """DB'den gelen bildirimi alıp yerel odaları günceller."""
+    if room_code not in rooms:
+        return
+        
+    db_room = db_get_vs_room(room_code)
+    if db_room:
+        room = rooms[room_code]
+        room.word_a = db_room["word_a"]
+        room.word_b = db_room["word_b"]
+        room.status = db_room["status"]
+        room.winner_info = db_room["winner_info"]
+        await room.broadcast(room.get_state_message())
+
+async def listen_for_updates():
+    """Postgres LISTEN ile diğer workerlardan gelen bildirimleri dinler."""
+    import select
+    from database import get_pool
+    
+    while True:
+        try:
+            pool = get_pool()
+            conn = pool.getconn()
+            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+            cur = conn.cursor()
+            cur.execute("LISTEN vs_room_updates;")
+            logger.info("[VS] Worker dinlemeye başladı (LISTEN vs_room_updates)")
+            
+            while True:
+                # Use non-blocking poll instead of select.select to avoid freezing the event loop
+                conn.poll()
+                while conn.notifies:
+                    notify = conn.notifies.pop(0)
+                    room_code = notify.payload
+                    await handle_db_notification(room_code)
+                
+                await asyncio.sleep(0.5) # Check for notifications every 500ms
+        except Exception as e:
+            logger.error(f"[VS] Listen döngüsü hatası: {e}")
+            await asyncio.sleep(5)
+        finally:
+            try: pool.putconn(conn)
+            except: pass
+
 # Room cleanup task
 async def cleanup_rooms():
     while True:
@@ -107,10 +157,27 @@ async def cleanup_rooms():
         except Exception as e:
             logger.error(f"[VS] Cleanup hatası: {e}")
 
-# Start cleanup task in the background
+# Start only local cleanup in the background (no DB access here)
 @router.on_event("startup")
 async def startup_event():
     asyncio.create_task(cleanup_rooms())
+
+_listen_task: Optional[asyncio.Task] = None
+
+async def start_listening_task():
+    global _listen_task
+    if _listen_task is None or _listen_task.done():
+        _listen_task = asyncio.create_task(listen_for_updates())
+        logger.info("[VS] Neon-Dostu Dinleme Başlatıldı")
+
+async def stop_listening_task():
+    global _listen_task
+    if _listen_task and not _listen_task.done():
+        _listen_task.cancel()
+        try: await _listen_task
+        except asyncio.CancelledError: pass
+        _listen_task = None
+        logger.info("[VS] Neon-Dostu Dinleme Durduruldu (Veritabanı Uyuyabilir)")
 
 
 @router.post("/api/vs/create")
@@ -131,6 +198,14 @@ async def create_vs_room(req: CreateRoomReq, request: Request):
             
     room_code = generate_room_code()
     rooms[room_code] = Room(room_code, word_a.strip().lower(), word_b.strip().lower())
+    
+    # Save to DB for other workers and cleanup old rooms to avoid background loop
+    try:
+        db_cleanup_vs_rooms(hours=1)
+        db_create_vs_room(room_code, word_a.strip().lower(), word_b.strip().lower())
+    except Exception as e:
+        logger.error(f"[VS] DB Oda oluşturma hatası: {e}")
+    
     return {"room_code": room_code, "word_a": word_a, "word_b": word_b}
 
 @router.websocket("/api/ws/vs/{room_code}")
@@ -138,9 +213,16 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
     await websocket.accept()
     
     if room_code not in rooms:
-        await websocket.send_json({"type": "error", "message": "Oda bulunamadı."})
-        await websocket.close()
-        return
+        # Check DB if room exists on another worker
+        db_room = db_get_vs_room(room_code)
+        if db_room:
+            rooms[room_code] = Room(room_code, db_room["word_a"], db_room["word_b"])
+            rooms[room_code].status = db_room["status"]
+            rooms[room_code].winner_info = db_room["winner_info"]
+        else:
+            await websocket.send_json({"type": "error", "message": "Oda bulunamadı."})
+            await websocket.close()
+            return
         
     room = rooms[room_code]
     if len(room.players) >= 16:
@@ -150,6 +232,10 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
         
     player = Player(websocket, username)
     room.players.append(player)
+    
+    # Start listening to DB only if we have active players on this worker
+    await start_listening_task()
+    
     await room.broadcast(room.get_state_message())
     
     try:
@@ -161,6 +247,11 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
             if msg_type == "start_game":
                 if room.status == "waiting" and len(room.players) >= 2:
                     room.status = "playing"
+                    
+                    # Update DB and notify others
+                    db_update_vs_room_status(room_code, "playing")
+                    db_notify_room_update(room_code)
+                    
                     await room.broadcast({"type": "game_start"})
                     await room.broadcast(room.get_state_message())
                 elif len(room.players) < 2:
@@ -176,6 +267,10 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
                         "nodes": data.get("nodes"),
                         "links": data.get("links")
                     }
+                    # Update DB and notify others
+                    db_update_vs_room_status(room_code, "finished", winner_info=room.winner_info)
+                    db_notify_room_update(room_code)
+                    
                     await room.broadcast({"type": "game_over", "winner_info": room.winner_info})
                     await room.broadcast(room.get_state_message())
             
@@ -198,12 +293,23 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
                     room.status = "waiting"
                     room.winner_info = None
                     room.word_a, room.word_b = word_a.strip().lower(), word_b.strip().lower()
+                    
+                    # Update DB and notify others
+                    db_update_vs_room_status(room_code, "waiting", word_a=room.word_a, word_b=room.word_b)
+                    db_notify_room_update(room_code)
+                    
                     await room.broadcast(room.get_state_message())
                     await room.broadcast({"type": "rematch_requested"})
                     
     except (WebSocketDisconnect, Exception):
         if player in room.players:
             room.players.remove(player)
+        
+        # Check if we should stop listening (no more active players on this worker)
+        has_any_player = any(len(r.players) > 0 for r in rooms.values())
+        if not has_any_player:
+            await stop_listening_task()
+
         if not room.players:
             if room_code in rooms: del rooms[room_code]
         else:

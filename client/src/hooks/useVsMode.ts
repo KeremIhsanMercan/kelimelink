@@ -17,6 +17,7 @@ export interface VsRoomState {
   players: string[];
   winnerInfo: WinnerInfo | null;
   error: string | null;
+  isLoading: boolean;
 }
 
 export function useVsMode(username: string) {
@@ -28,90 +29,85 @@ export function useVsMode(username: string) {
     players: [],
     winnerInfo: null,
     error: null,
+    isLoading: false,
   });
   
   const wsRef = useRef<WebSocket | null>(null);
 
   const connect = useCallback((code: string) => {
-    if (wsRef.current) wsRef.current.close();
-    
-    const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
-    let wsBase: string;
+    return new Promise<void>((resolve, reject) => {
+      if (wsRef.current) wsRef.current.close();
+      
+      const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const wsBase = API_BASE.replace('http:', 'ws:').replace('https:', 'wss:');
+      const wsUrl = `${wsBase}/api/ws/vs/${code}?username=${encodeURIComponent(username)}`;
+      
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-    if (API_BASE) {
-      wsBase = API_BASE.replace('http:', 'ws:').replace('https:', 'wss:');
-    } else {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      let host = window.location.host;
-      if (host.includes('localhost:5173') || host.includes('127.0.0.1:5173')) {
-        host = host.replace('5173', '8000');
-      }
-      wsBase = `${protocol}//${host}`;
-    }
+      let hasResolved = false;
 
-    const wsUrl = `${wsBase}/api/ws/vs/${code}?username=${encodeURIComponent(username)}`;
-    
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+      ws.onopen = () => {
+        // We don't resolve yet, we wait for the first room_state
+      };
 
-    ws.onopen = () => {
-      setState(s => ({ ...s, error: null }));
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'room_state') {
-        setState(s => ({
-          ...s,
-          roomCode: data.room_code,
-          status: data.status === 'finished' && s.status === 'playing' ? 'playing' : data.status,
-          wordA: data.word_a,
-          wordB: data.word_b,
-          players: data.players,
-          winnerInfo: data.winner_info,
-          error: null,
-        }));
-      } else if (data.type === 'game_start') {
-        setState(s => ({ ...s, status: 'playing', error: null }));
-      } else if (data.type === 'game_over') {
-        setState(s => ({ ...s, status: 'finished', winnerInfo: data.winner_info }));
-      } else if (data.type === 'error') {
-        setState(s => ({ ...s, error: data.message }));
-        ws.close();
-      }
-    };
-    
-    ws.onclose = (event) => {
-      // Code 1008 = policy violation (room not found)
-      if (event.code === 1000 || event.code === 1001) {
-        setState(s => ({ ...s, status: 'disconnected' }));
-      } else {
-        setState(s => ({
-          ...s,
-          status: 'disconnected',
-          error: s.error ?? 'Bağlantı kesildi.',
-        }));
-      }
-    };
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'room_state') {
+          setState(s => ({
+            ...s,
+            roomCode: data.room_code,
+            status: data.status,
+            wordA: data.word_a,
+            wordB: data.word_b,
+            players: data.players,
+            winnerInfo: data.winner_info,
+            error: null,
+            isLoading: false,
+          }));
+          if (!hasResolved) {
+            hasResolved = true;
+            resolve();
+          }
+        } else if (data.type === 'game_start') {
+          setState(s => ({ ...s, status: 'playing', error: null, isLoading: false }));
+        } else if (data.type === 'game_over') {
+          setState(s => ({ ...s, status: 'finished', winnerInfo: data.winner_info }));
+        } else if (data.type === 'error') {
+          setState(s => ({ ...s, error: data.message, isLoading: false }));
+          if (!hasResolved) {
+            hasResolved = true;
+            reject(new Error(data.message));
+          }
+          ws.close();
+        }
+      };
+      
+      ws.onclose = (event) => {
+        if (!hasResolved) {
+          hasResolved = true;
+          reject(new Error('Bağlantı kurulamadı.'));
+        }
+        // Code 1008 = policy violation (room not found)
+        if (event.code === 1000 || event.code === 1001) {
+          setState(s => ({ ...s, status: 'disconnected', isLoading: false }));
+        } else {
+          setState(s => ({
+            ...s,
+            status: 'disconnected',
+            error: s.error ?? 'Bağlantı kesildi.',
+            isLoading: false,
+          }));
+        }
+      };
+    });
   }, [username]);
 
   const createRoom = useCallback(async (wordA?: string, wordB?: string) => {
+    setState(s => ({ ...s, isLoading: true, error: null }));
     try {
-      const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
-      let url: string;
-
-      if (API_BASE) {
-        url = `${API_BASE}/api/vs/create`;
-      } else {
-        let host = window.location.host;
-        let protocol = window.location.protocol;
-        if (host.includes('localhost:5173') || host.includes('127.0.0.1:5173')) {
-          host = host.replace('5173', '8000');
-        }
-        url = `${protocol}//${host}/api/vs/create`;
-      }
-
-      const res = await fetch(url, {
+      const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const res = await fetch(`${API_BASE}/api/vs/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word_a: wordA || null, word_b: wordB || null })
@@ -120,16 +116,17 @@ export function useVsMode(username: string) {
       if (!res.ok) {
         throw new Error(data.detail || 'Oda kurulamadı');
       }
-      connect(data.room_code);
+      await connect(data.room_code);
       return data.room_code;
     } catch (e: any) {
       console.error(e);
+      setState(s => ({ ...s, isLoading: false, error: e.message }));
       throw e;
     }
   }, [connect]);
 
   const joinRoom = useCallback((code: string) => {
-    setState(s => ({ ...s, error: null }));
+    setState(s => ({ ...s, error: null, isLoading: true }));
     connect(code);
   }, [connect]);
 
@@ -150,11 +147,13 @@ export function useVsMode(username: string) {
       players: [],
       winnerInfo: null,
       error: null,
+      isLoading: false,
     });
   }, []);
 
   const startGame = useCallback(() => {
     if (wsRef.current && state.status === 'waiting') {
+      setState(s => ({ ...s, isLoading: true }));
       wsRef.current.send(JSON.stringify({ type: 'start_game' }));
     }
   }, [state.status]);
@@ -173,6 +172,7 @@ export function useVsMode(username: string) {
 
   const restartGame = useCallback((wordA?: string, wordB?: string) => {
     if (wsRef.current) {
+      setState(s => ({ ...s, isLoading: true, error: null }));
       wsRef.current.send(JSON.stringify({
         type: 'restart_game',
         word_a: wordA || null,

@@ -353,6 +353,7 @@ export default function App() {
           onJoinRoom={(code) => vsMode.joinRoom(code)}
           vsError={vsMode.error}
           onClearVsError={vsMode.clearError}
+          isLoading={vsMode.isLoading}
         />
       )}
 
@@ -366,6 +367,7 @@ export default function App() {
           status={vsMode.status as 'waiting' | 'finished'}
           onStartGame={vsMode.startGame}
           onLeave={vsMode.leaveRoom}
+          isLoading={vsMode.isLoading}
         />
       )}
 
@@ -385,6 +387,7 @@ export default function App() {
           onRestart={(a, b) => vsMode.restartGame(a, b)}
           vsError={vsMode.error}
           onClearVsError={vsMode.clearError}
+          isLoading={vsMode.isLoading}
         />
       )}
 

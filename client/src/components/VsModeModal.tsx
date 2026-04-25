@@ -7,9 +7,10 @@ interface VsModeModalProps {
   onJoinRoom: (code: string) => void;
   vsError: string | null;
   onClearVsError: () => void;
+  isLoading: boolean;
 }
 
-export default function VsModeModal({ onClose, onCreateRoom, onJoinRoom, vsError, onClearVsError }: VsModeModalProps) {
+export default function VsModeModal({ onClose, onCreateRoom, onJoinRoom, vsError, onClearVsError, isLoading }: VsModeModalProps) {
   const [tab, setTab] = useState<'create' | 'join'>('create');
 
   const [wordA, setWordA] = useState('');
@@ -101,9 +102,11 @@ export default function VsModeModal({ onClose, onCreateRoom, onJoinRoom, vsError
               {createError && <div style={{ color: '#dc2626', fontSize: '13px', textAlign: 'center' }}>{createError}</div>}
               <button
                 onClick={handleCreate}
-                style={{ fontFamily: 'inherit', marginTop: '4px', padding: '12px', background: '#3b82f6', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', width: '100%' }}
+                disabled={isLoading}
+                className="vs-btn vs-btn--primary"
+                style={{ marginTop: '4px' }}
               >
-                Oda Oluştur
+                {isLoading ? <div className="loading-spinner loading-spinner--small" /> : 'Oda Oluştur'}
               </button>
             </div>
           ) : (
@@ -171,10 +174,14 @@ export default function VsModeModal({ onClose, onCreateRoom, onJoinRoom, vsError
               </div>
               <button
                 onClick={() => { onClearVsError(); onJoinRoom(joinCode); }}
-                disabled={joinCode.length !== 6}
-                style={{ fontFamily: 'inherit', marginTop: '4px', padding: '12px', background: joinCode.length === 6 ? '#10b981' : '#9ca3af', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: joinCode.length === 6 ? 'pointer' : 'not-allowed', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', transition: 'all 0.2s', width: '100%' }}
+                disabled={joinCode.length !== 6 || isLoading}
+                className="vs-btn vs-btn--success"
+                style={{ 
+                    marginTop: '4px',
+                    background: joinCode.length === 6 ? undefined : '#9ca3af' // Keep grey if not 6 chars
+                }}
               >
-                Odaya Katıl
+                {isLoading ? <div className="loading-spinner loading-spinner--small" /> : 'Odaya Katıl'}
               </button>
             </div>
           )}
