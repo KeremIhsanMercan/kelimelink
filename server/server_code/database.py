@@ -8,6 +8,7 @@ import os
 from datetime import date, datetime
 from contextlib import contextmanager
 import psycopg2
+import unicodedata
 from psycopg2.extras import RealDictCursor
 from psycopg2.pool import ThreadedConnectionPool
 from config import DATABASE_URL, DB_MIN_CONNECTIONS, DB_MAX_CONNECTIONS
@@ -286,7 +287,9 @@ def get_all_custom_links() -> dict[str, list[str]]:
     with get_cursor() as cur:
         cur.execute("SELECT word_a, word_b FROM custom_links")
         for row in cur.fetchall():
-            wa, wb = row["word_a"], row["word_b"]
+            # Normalize to NFC and lowercase to ensure consistency across systems
+            wa = unicodedata.normalize('NFC', str(row["word_a"])).strip().lower()
+            wb = unicodedata.normalize('NFC', str(row["word_b"])).strip().lower()
             if wa not in links_dict:
                 links_dict[wa] = []
             links_dict[wa].append(wb)
@@ -295,6 +298,9 @@ def get_all_custom_links() -> dict[str, list[str]]:
 
 def add_custom_link(word_a: str, word_b: str):
     """Yeni bir özel bağlantı ekler."""
+    # Normalize and lowercase before saving to DB
+    word_a = unicodedata.normalize('NFC', word_a).strip().lower()
+    word_b = unicodedata.normalize('NFC', word_b).strip().lower()
     with get_cursor() as cur:
         cur.execute(
             """

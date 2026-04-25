@@ -3,6 +3,7 @@ import string
 import logging
 import time
 import asyncio
+import unicodedata
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, HTTPException
@@ -78,8 +79,8 @@ def validate_words(word_a: str, word_b: str, word_vectors, custom_links_dict):
     from nlp_engine import cosine_similarity, check_custom_link
     from config import SIMILARITY_THRESHOLD
     
-    if word_a: word_a = word_a.strip().lower()
-    if word_b: word_b = word_b.strip().lower()
+    if word_a: word_a = unicodedata.normalize('NFC', word_a.strip().lower())
+    if word_b: word_b = unicodedata.normalize('NFC', word_b.strip().lower())
 
     if word_a and word_b:
         if word_a not in word_vectors:
@@ -204,7 +205,9 @@ async def create_vs_room(req: CreateRoomReq, request: Request):
     # Save to DB for other workers and cleanup old rooms to avoid background loop
     try:
         db_cleanup_vs_rooms(hours=1)
-        db_create_vs_room(room_code, word_a.strip().lower(), word_b.strip().lower()) 
+        wa_norm = unicodedata.normalize('NFC', word_a.strip().lower())
+        wb_norm = unicodedata.normalize('NFC', word_b.strip().lower())
+        db_create_vs_room(room_code, wa_norm, wb_norm) 
     except Exception as e:
         logger.error(f"[VS] DB Oda oluşturma hatası: {e}")
     
@@ -305,7 +308,9 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
                     
                     room.status = "waiting"
                     room.winner_info = None
-                    room.word_a, room.word_b = word_a.strip().lower(), word_b.strip().lower()
+                    wa_norm = unicodedata.normalize('NFC', word_a.strip().lower())
+                    wb_norm = unicodedata.normalize('NFC', word_b.strip().lower())
+                    room.word_a, room.word_b = wa_norm, wb_norm
                     
                     # Update DB and notify others
                     db_update_vs_room_status(room_code, "waiting", word_a=room.word_a, word_b=room.word_b)

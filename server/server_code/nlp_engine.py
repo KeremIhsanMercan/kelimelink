@@ -8,6 +8,7 @@ import os
 import random
 import numpy as np
 import hashlib
+import unicodedata
 from common_words import COMMON_TURKISH_WORDS
 from config import SIMILARITY_THRESHOLD
 
@@ -17,6 +18,10 @@ def check_custom_link(word1: str, word2: str, custom_links_dict: dict[str, list[
     Returns a deterministic pseudo-random similarity score between 45.0 and 55.0
     if a link exists, otherwise None.
     """
+    # Ensure both words are normalized to NFC for comparison
+    word1 = unicodedata.normalize('NFC', word1.lower())
+    word2 = unicodedata.normalize('NFC', word2.lower())
+
     has_link = False
     if word1 in custom_links_dict and word2 in custom_links_dict[word1]:
         has_link = True
@@ -58,7 +63,7 @@ def load_vectors(csv_path: str) -> dict[str, np.ndarray]:
             for row in reader:
                 if len(row) < 2:
                     continue
-                word = row[0].strip().lower()
+                word = unicodedata.normalize('NFC', row[0].strip().lower())
                 try:
                     vec = np.array([float(x) for x in row[1:]], dtype=np.float32)
                     if vec.shape[0] == 300:

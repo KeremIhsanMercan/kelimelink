@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from contextlib import asynccontextmanager
 from collections import OrderedDict
 import logging
+import unicodedata
 
 from fastapi import FastAPI, HTTPException, Path, Query, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -144,7 +145,9 @@ class AddCustomLinkRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 def normalize_word(word: str) -> str:
-    return word.strip().lower()
+    if not word: return ""
+    # Normalize to NFC and lowercase to ensure consistency across systems
+    return unicodedata.normalize('NFC', word.strip().lower())
 
 def canonical_board_words(word: str, board_words: list[str], vectors: dict) -> tuple[str, ...]:
     return tuple(sorted({normalize_word(w) for w in board_words if normalize_word(w) != word and normalize_word(w) in vectors}))
