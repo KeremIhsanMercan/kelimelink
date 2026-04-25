@@ -35,6 +35,8 @@ export interface GlobalStats {
   total_solves: number;
   average_guesses: number;
   min_guesses: number;
+  min_guesses_username: string | null;
+  min_guesses_path: string | null;
 }
 
 export async function fetchDailyPuzzle(): Promise<DailyPuzzle> {
@@ -52,28 +54,30 @@ export async function fetchPracticePuzzle(): Promise<PracticePuzzle> {
   return res.data;
 }
 
-export async function submitGuess(word: string, boardWords: string[]): Promise<GuessResponse> {
+export async function submitGuess(word: string, boardWords: string[], username: string = ''): Promise<GuessResponse> {
   const res = await api.post<GuessResponse>('/api/guess', {
     word,
     board_words: boardWords,
+    username,
   });
   return res.data;
 }
 
-export async function fetchSimilarities(word: string, boardWords: string[]): Promise<GuessResponse> {
+export async function fetchSimilarities(word: string, boardWords: string[], username: string = ''): Promise<GuessResponse> {
   const res = await api.post<GuessResponse>('/api/similarities', {
     word,
     board_words: boardWords,
+    username,
   });
   return res.data;
 }
 
-export async function recordSolve(guessCount: number, isPractice: boolean = false): Promise<void> {
-  await api.post('/api/solve', { guess_count: guessCount, is_practice: isPractice });
+export async function recordSolve(guessCount: number, path: string[] | null, gamemode: string = 'daily', username: string = ''): Promise<void> {
+  await api.post('/api/solve', { guess_count: guessCount, path: path, gamemode, username });
 }
 
-export async function fetchStats(): Promise<GlobalStats> {
-  const res = await api.get<GlobalStats>('/api/stats');
+export async function fetchStats(gamemode: string = 'daily'): Promise<GlobalStats> {
+  const res = await api.get<GlobalStats>('/api/stats', { params: { gamemode } });
   return res.data;
 }
 
@@ -89,4 +93,13 @@ export async function rebuildBoard(wordA: string, wordB: string, guessedWords: s
     guessed_words: guessedWords,
   });
   return res.data;
+}
+
+export async function submitCustomLinkReport(wordA: string, wordB: string, reason: string, username: string = ''): Promise<void> {
+  await api.post('/api/custom-link-report', {
+    word_a: wordA,
+    word_b: wordB,
+    reason: reason,
+    username: username,
+  });
 }

@@ -36,6 +36,12 @@ const GAME_STATE_KEY = 'kelimelink-game-state';
 const STATS_KEY = 'kelimelink-stats';
 const PRACTICE_STATS_KEY = 'kelimelink-practice-stats';
 const PRACTICE_GAME_STATE_KEY = 'kelimelink-practice-game-state';
+const USERNAME_KEY = 'kelimelink-username';
+
+function generateUsername(): string {
+  const num = Math.floor(Math.random() * 1000) + 1;
+  return `Oyuncu${num}`;
+}
 
 
 function loadFromStorage<T>(key: string, fallback: T): T {
@@ -99,6 +105,23 @@ export function useLocalStorage() {
   useEffect(() => {
     saveToStorage(PRACTICE_STATS_KEY, practiceStats);
   }, [practiceStats]);
+
+  // Kullanıcı adı yönetimi
+  const [username, setUsernameState] = useState<string>(() => {
+    const saved = localStorage.getItem(USERNAME_KEY);
+    if (saved) return saved;
+    const generated = generateUsername();
+    localStorage.setItem(USERNAME_KEY, generated);
+    return generated;
+  });
+
+  const setUsername = useCallback((name: string): void => {
+    const trimmed = name.trim();
+    if (trimmed && trimmed.length <= 20) {
+      setUsernameState(trimmed);
+      localStorage.setItem(USERNAME_KEY, trimmed);
+    }
+  }, []);
 
   /**
    * Bugünün kayıtlı oyun durumunu yükler.
@@ -179,6 +202,8 @@ export function useLocalStorage() {
   return {
     stats,
     practiceStats,
+    username,
+    setUsername,
     loadGameState,
     saveGameState,
     loadPracticeGameState,

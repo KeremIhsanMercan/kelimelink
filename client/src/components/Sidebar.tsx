@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react';
 import type { SimilarityResult } from '../services/api';
-import type { GameMode } from '../hooks/useGameState';
+import { submitCustomLinkReport } from '../services/api';
+
+import type { GameMode, GraphNode } from '../hooks/useGameState';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import AdUnit from './AdUnit';
-import { Trophy } from 'lucide-react';
+import { Trophy, HelpCircle, Plus } from 'lucide-react';
 
 interface SidebarProps {
   wordA: string;
@@ -14,12 +17,19 @@ interface SidebarProps {
   error: string | null;
   selectedNode: string | null;
   selectedNodeSimilarities: SimilarityResult[];
+  nodes: GraphNode[];
+  shortestPath: string[] | null;
   onAddWord: (word: string) => void;
   onSelectNode: (word: string) => void;
   gameMode: GameMode;
   nextPuzzleAt: string | null;
   serverOffset: number;
   onTimerEnd?: () => void;
+  dailyRecordHolder?: {
+    username: string | null;
+    path: string | null;
+    minGuesses: number;
+  } | null;
 }
 
 export default function Sidebar({
@@ -31,18 +41,35 @@ export default function Sidebar({
   error,
   selectedNode,
   selectedNodeSimilarities,
+  nodes,
+  shortestPath,
   onAddWord,
   onSelectNode,
   gameMode,
   nextPuzzleAt,
   serverOffset,
   onTimerEnd,
+  dailyRecordHolder,
 }: SidebarProps) {
   const [inputValue, setInputValue] = useState('');
   const [localWarning, setLocalWarning] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [showRecord, setShowRecord] = useState(false);
+
+  const { username } = useLocalStorage();
+
+  // Modal State
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportWord1, setReportWord1] = useState('');
+  const [reportWord2, setReportWord2] = useState('');
+  const [reportReason, setReportReason] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportSuccess, setReportSuccess] = useState(false);
+  const [reportModalClosing, setReportModalClosing] = useState(false);
+
 
   useEffect(() => {
     if (!isGuessing && !isSolved && inputRef.current) {
@@ -108,10 +135,70 @@ export default function Sidebar({
     }
   };
 
+  const openReportModal = (w1: string, w2: string) => {
+    setReportWord1(w1);
+    setReportWord2(w2);
+    setReportReason('');
+    setReportError(null);
+    setReportSuccess(false);
+    setReportModalOpen(true);
+    setReportModalClosing(false);
+  };
+
+  const closeReportModal = () => {
+    setReportModalClosing(true);
+    setTimeout(() => {
+      setReportModalOpen(false);
+      setReportModalClosing(false);
+    }, 300);
+  };
+
+  const handleReportSubmit = async () => {
+    if (!reportReason.trim()) {
+      setReportError('Lütfen sebebini yazın.');
+      return;
+    }
+    setIsSubmittingReport(true);
+    setReportError(null);
+    try {
+      await submitCustomLinkReport(reportWord1, reportWord2, reportReason, username);
+      setReportSuccess(true);
+      setTimeout(() => {
+        closeReportModal();
+      }, 2000);
+    } catch (err: any) {
+      setReportError('Rapor gönderilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   const handleInputChange = (val: string) => {
     setInputValue(val);
     // Kullanıcı yazarken uyarıyı temizle
     if (localWarning) setLocalWarning(null);
+  };
+
+  const getNodeSide = (word: string): string => {
+    // If game is solved and word is on the shortest path, return 'path'
+    if (isSolved && shortestPath && shortestPath.includes(word)) {
+      return 'path';
+    }
+    const node = nodes.find(n => n.id === word);
+    return node ? node.chainSide : 'none';
+  };
+
+  const getRowSide = (word1: string, word2: string): string => {
+    const w1OnPath = isSolved && shortestPath && shortestPath.includes(word1);
+    const w2OnPath = isSolved && shortestPath && shortestPath.includes(word2);
+
+    if (w1OnPath && w2OnPath) {
+      return 'path';
+    }
+
+    // If not both on path, return the actual chainSide of the other word
+    const node = nodes.find(n => n.id === word2);
+    return node ? node.chainSide : 'none';
   };
 
   return (
@@ -165,19 +252,48 @@ export default function Sidebar({
           Toplam <strong>{guessCount} tahmin</strong> yapıldı.
         </p>
         {isSolved && (
-          <p
-            className="status-text"
-            style={{
-              marginTop: 8,
-              color: '#059669',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Trophy size={16} /> Bulmaca çözüldü!
-          </p>
+          <>
+            <p
+              className="status-text"
+              style={{
+                marginTop: 8,
+                color: '#059669',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Trophy size={16} /> Bulmaca çözüldü!
+              {gameMode === 'daily' && (
+                <button
+                  className="record-hint-btn"
+                  onClick={() => setShowRecord((prev) => !prev)}
+                  title="Günün rekorunu gör"
+                >
+                  <HelpCircle size={15} />
+                </button>
+              )}
+            </p>
+            {showRecord && gameMode === 'daily' && (
+              <div className="record-popover">
+                {dailyRecordHolder && dailyRecordHolder.minGuesses > 0 && dailyRecordHolder.username ? (
+                  <>
+                    <div className="record-popover__title">🏆 Günün Rekoru</div>
+                    <div className="record-popover__user">
+                      <strong>{dailyRecordHolder.username}</strong> — {dailyRecordHolder.minGuesses} tahmin
+                    </div>
+
+                    {dailyRecordHolder.path && (
+                      <div className="record-popover__path">En kısa yolu: <br /> {dailyRecordHolder.path.replaceAll(", ", " → ")}</div>
+                    )}
+                  </>
+                ) : (
+                  <div className="record-popover__empty">Daha kimse günün bulmacasını çözemedi</div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -188,22 +304,27 @@ export default function Sidebar({
         {selectedNode ? (
           <>
             <div className="selected-word-header">
-              <span className="selected-word-badge">{selectedNode}</span>
+              <span className={`selected-word-badge bg-node-${getNodeSide(selectedNode)}`}>
+                {selectedNode}
+              </span>
             </div>
             <p className="links-info">
-              İki kelime arasındaki benzerlik %27.5'in üzerinde ise bağlantı oluşur.
+              İki kelime arasındaki benzerlik %26'nın üzerinde ise bağlantı oluşur.
             </p>
             <div className="links-table" ref={scrollRef}>
               {selectedNodeSimilarities.length > 0 ? (
                 selectedNodeSimilarities.map((sim, i) => {
                   const otherWord =
                     sim.word1 === selectedNode ? sim.word2 : sim.word1;
+                  const side = getRowSide(selectedNode, otherWord);
                   return (
                     <div
                       key={i}
-                      className={`link-row ${sim.is_link ? 'link-row--linked' : ''}`}
+                      className={`link-row ${sim.is_link ? `link-row--linked-${side}` : ''}`}
                     >
-                      <span className="link-row__word">{selectedNode}</span>
+                      <span className="link-row__word">
+                        {selectedNode}
+                      </span>
                       <span className="link-row__dash">—</span>
                       <span
                         className="link-row__word link-row__word--clickable"
@@ -212,9 +333,22 @@ export default function Sidebar({
                       >
                         {otherWord}
                       </span>
-                      <span className="link-row__score">
-                        %{sim.similarity.toFixed(1)}
-                      </span>
+                      <div className="link-row__actions">
+                        {!sim.is_link ? (
+                          <button
+                            className="link-row__add-btn"
+                            onClick={() => openReportModal(selectedNode, otherWord)}
+                            title="Bağlantı öner"
+                          >
+                            <Plus size={16} />
+                          </button>
+                        ) : (
+                          <div style={{ width: '16px', marginLeft: '8px' }} />
+                        )}
+                        <span className="link-row__score">
+                          %{sim.similarity.toFixed(1)}
+                        </span>
+                      </div>
                     </div>
                   );
                 })
@@ -240,6 +374,45 @@ export default function Sidebar({
           responsive={true}
         />
       </div>
+
+      {reportModalOpen && (
+        <div className={`report-modal-overlay ${reportModalClosing ? 'closing' : ''}`}>
+          <div className="report-modal">
+            {reportSuccess ? (
+              <div className="report-modal__success">
+                Raporunuz gönderildi! Teşekkürler.
+              </div>
+            ) : (
+              <>
+                <h3 className="report-modal__title">Özel Bağlantı Önerisi</h3>
+                <p className="report-modal__desc">
+                  "{reportWord1}" ve "{reportWord2}" arasında bağlantı olması gerektiğini mi düşünüyorsun?
+                </p>
+                <textarea
+                  className="report-modal__input"
+                  placeholder="Lütfen sebebini yazın."
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  rows={3}
+                  maxLength={100}
+                  style={{ resize: 'none' }}
+                />
+                {reportError && <div className="report-modal__error">{reportError}</div>}
+                <div className="report-modal__actions">
+                  <button className="report-modal__btn report-modal__btn--cancel" onClick={closeReportModal}>Kapat</button>
+                  <button
+                    className="report-modal__btn report-modal__btn--submit"
+                    onClick={handleReportSubmit}
+                    disabled={isSubmittingReport}
+                  >
+                    {isSubmittingReport ? 'Gönderiliyor...' : 'Raporu Gönder'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

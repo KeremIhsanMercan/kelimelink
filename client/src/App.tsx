@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar';
 import WinBanner from './components/WinBanner';
 import ProfileModal from './components/ProfileModal';
 import InfoModal from './components/InfoModal';
+import UsernameBadge from './components/UsernameBadge';
 import AdUnit from './components/AdUnit';
 import './index.css';
 
@@ -40,6 +41,9 @@ export default function App() {
     startNewPracticeGame,
     nextPuzzleAt,
     serverOffset,
+    username,
+    setUsername,
+    dailyRecordHolder,
   } = useGameState();
 
 
@@ -53,6 +57,18 @@ export default function App() {
     }
     return false;
   });
+
+  const [hasClickedInfo, setHasClickedInfo] = useState(() => {
+    return localStorage.getItem('kelimelink_clicked_info_v2') === 'true';
+  });
+
+  const handleInfoClick = () => {
+    setShowInfo(true);
+    if (!hasClickedInfo) {
+      setHasClickedInfo(true);
+      localStorage.setItem('kelimelink_clicked_info_v2', 'true');
+    }
+  };
 
   // Reset scroll position to top on mount and whenever game state changes.
   // This prevents the header from being pushed off-screen by mobile browser behavior
@@ -101,8 +117,8 @@ export default function App() {
       <header className="app-header">
         <div className="app-header__left-actions">
           <button
-            className="app-header__action-btn"
-            onClick={() => setShowInfo(true)}
+            className={`app-header__action-btn ${!hasClickedInfo ? 'has-glow' : ''}`}
+            onClick={handleInfoClick}
             aria-label="Nasıl Oynanır?"
             title="Nasıl Oynanır?"
           >
@@ -113,6 +129,7 @@ export default function App() {
         <h1 className="app-header__title">KelimeLink</h1>
         <span className="app-header__subtitle">Kelime Bağlantı Bulmacası</span>
         <div className="app-header__actions">
+          <UsernameBadge username={username} onUsernameChange={setUsername} />
           <button
             className="app-header__action-btn"
             onClick={toggleDarkMode}
@@ -168,6 +185,8 @@ export default function App() {
         <Sidebar
           wordA={wordA}
           wordB={wordB}
+          nodes={nodes}
+          shortestPath={shortestPath}
           nodeCount={nodes.length}
           guessCount={guessCount}
           isSolved={isSolved || inputDisabled}
@@ -181,6 +200,7 @@ export default function App() {
           nextPuzzleAt={nextPuzzleAt}
           serverOffset={serverOffset}
           onTimerEnd={switchToDaily}
+          dailyRecordHolder={dailyRecordHolder}
         />
         <GraphCanvas
           nodes={nodes}

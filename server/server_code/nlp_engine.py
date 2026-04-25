@@ -8,8 +8,32 @@ import os
 import random
 import numpy as np
 from common_words import COMMON_TURKISH_WORDS
+from custom_links import CUSTOM_SEMANTIC_LINKS
 
-SIMILARITY_LINK_THRESHOLD = 27.5
+import hashlib
+
+SIMILARITY_LINK_THRESHOLD = 26
+
+def check_custom_link(word1: str, word2: str) -> float | None:
+    """
+    Checks if there's a custom semantic link between two words.
+    Returns a deterministic pseudo-random similarity score between 45.0 and 55.0
+    if a link exists, otherwise None.
+    """
+    has_link = False
+    if word1 in CUSTOM_SEMANTIC_LINKS and word2 in CUSTOM_SEMANTIC_LINKS[word1]:
+        has_link = True
+    elif word2 in CUSTOM_SEMANTIC_LINKS and word1 in CUSTOM_SEMANTIC_LINKS[word2]:
+        has_link = True
+        
+    if has_link:
+        # Generate a deterministic random score based on the word pair
+        pair_str = "_".join(sorted([word1, word2]))
+        seed_val = int(hashlib.md5(pair_str.encode()).hexdigest()[:8], 16)
+        rng = random.Random(seed_val)
+        return rng.randint(450, 550) / 10.0
+        
+    return None
 
 
 def build_normalized_vectors(vectors: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
@@ -72,16 +96,24 @@ def get_all_similarities(
     Tahmin edilen kelimenin tahtadaki tüm kelimelerle benzerlik skorlarını hesaplar.
     Dönüş: [{word1, word2, similarity, is_link}] listesi, skorlara göre azalan sırada.
     """
-    if word not in vectors:
-        return []
-
-    word_vec = vectors[word]
+    word_vec = vectors.get(word)
     results = []
 
     for board_word in board_words:
         if board_word == word:
             continue
-        if board_word not in vectors:
+            
+        custom_sim = check_custom_link(word, board_word)
+        if custom_sim is not None:
+            results.append({
+                "word1": word,
+                "word2": board_word,
+                "similarity": custom_sim,
+                "is_link": True,
+            })
+            continue
+
+        if word_vec is None or board_word not in vectors:
             continue
 
         sim = cosine_similarity(word_vec, vectors[board_word])
@@ -104,37 +136,48 @@ def get_all_similarities_fast(
     """
     Fast path for similarity calculations using pre-normalized vectors.
     """
-    word_vec = normalized_vectors.get(word)
-    if word_vec is None:
-        return []
-
+    results = []
     valid_board_words = []
     valid_board_vectors = []
+    
+    word_vec = normalized_vectors.get(word)
 
     for board_word in board_words:
         if board_word == word:
             continue
+            
+        custom_sim = check_custom_link(word, board_word)
+        if custom_sim is not None:
+            results.append({
+                "word1": word,
+                "word2": board_word,
+                "similarity": custom_sim,
+                "is_link": True,
+            })
+            continue
+
+        if word_vec is None:
+            continue
+            
         board_vec = normalized_vectors.get(board_word)
         if board_vec is None:
             continue
+            
         valid_board_words.append(board_word)
         valid_board_vectors.append(board_vec)
 
-    if not valid_board_vectors:
-        return []
+    if valid_board_vectors and word_vec is not None:
+        board_matrix = np.stack(valid_board_vectors)
+        similarities = np.round(np.dot(board_matrix, word_vec) * 100, 1)
 
-    board_matrix = np.stack(valid_board_vectors)
-    similarities = np.round(np.dot(board_matrix, word_vec) * 100, 1)
-
-    results = []
-    for idx, board_word in enumerate(valid_board_words):
-        sim = float(similarities[idx])
-        results.append({
-            "word1": word,
-            "word2": board_word,
-            "similarity": sim,
-            "is_link": sim >= SIMILARITY_LINK_THRESHOLD,
-        })
+        for idx, board_word in enumerate(valid_board_words):
+            sim = float(similarities[idx])
+            results.append({
+                "word1": word,
+                "word2": board_word,
+                "similarity": sim,
+                "is_link": sim >= SIMILARITY_LINK_THRESHOLD,
+            })
 
     results.sort(key=lambda x: x["similarity"], reverse=True)
     return results
@@ -203,7 +246,8 @@ def batch_similarities(
     }
     """
     unique_words = list(set(words))
-    valid_words = [w for w in unique_words if w in vectors]
+    # Kelimenin vektörü olmasa bile custom linki olabilir, o yüzden valid_words'ü biraz daha geniş tutalım
+    valid_words = [w for w in unique_words if w in vectors or w in CUSTOM_SEMANTIC_LINKS or any(w in v for v in CUSTOM_SEMANTIC_LINKS.values())]
     
     links = []
     # word -> list of similarity results
@@ -212,13 +256,20 @@ def batch_similarities(
     # Pairwise comparison
     for i in range(len(valid_words)):
         w1 = valid_words[i]
-        v1 = vectors[w1]
+        v1 = vectors.get(w1)
         for j in range(i + 1, len(valid_words)):
             w2 = valid_words[j]
-            v2 = vectors[w2]
+            v2 = vectors.get(w2)
             
-            sim = cosine_similarity(v1, v2)
-            is_link = sim >= SIMILARITY_LINK_THRESHOLD
+            custom_sim = check_custom_link(w1, w2)
+            if custom_sim is not None:
+                sim = custom_sim
+                is_link = True
+            else:
+                if v1 is None or v2 is None:
+                    continue
+                sim = cosine_similarity(v1, v2)
+                is_link = sim >= SIMILARITY_LINK_THRESHOLD
             
             res1 = {"word1": w1, "word2": w2, "similarity": sim, "is_link": is_link}
             res2 = {"word1": w2, "word2": w1, "similarity": sim, "is_link": is_link}

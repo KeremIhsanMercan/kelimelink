@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { fetchDailyPuzzle, fetchPracticePuzzle, submitGuess, fetchSimilarities, recordSolve, rebuildBoard, type SimilarityResult } from '../services/api';
+import { fetchDailyPuzzle, fetchPracticePuzzle, submitGuess, fetchSimilarities, recordSolve, fetchStats, rebuildBoard, type SimilarityResult } from '../services/api';
 import { useLocalStorage } from './useLocalStorage';
 
 /* ============================================
@@ -45,6 +45,7 @@ export interface GameState {
   preWinChainSides: Record<string, GraphNode['chainSide']> | null;
   nextPuzzleAt: string | null;
   serverOffset: number; // milliseconds
+  lastAddedNodeId: string | null;
 }
 
 interface BuildGameStateParams {
@@ -57,6 +58,7 @@ interface BuildGameStateParams {
   isSolved?: boolean;
   nextPuzzleAt?: string | null;
   serverOffset?: number;
+  lastAddedNodeId?: string | null;
 }
 
 function createBaseNodes(wordA: string, wordB: string): GraphNode[] {
@@ -76,6 +78,7 @@ function buildGameState({
   isSolved = false,
   nextPuzzleAt = null,
   serverOffset = 0,
+  lastAddedNodeId = null,
 }: BuildGameStateParams): GameState {
   return {
     isLoading: false,
@@ -96,6 +99,7 @@ function buildGameState({
     preWinChainSides: null,
     nextPuzzleAt,
     serverOffset,
+    lastAddedNodeId,
   };
 }
 
@@ -164,7 +168,7 @@ function findShortestPath(
    ============================================ */
 
 export function useGameState() {
-  const { stats, practiceStats, loadGameState, saveGameState, loadPracticeGameState, savePracticeGameState, clearPracticeGameState, recordWin, recordPracticeWin } = useLocalStorage();
+  const { stats, practiceStats, username, setUsername, loadGameState, saveGameState, loadPracticeGameState, savePracticeGameState, clearPracticeGameState, recordWin, recordPracticeWin } = useLocalStorage();
 
   const hasRecordedWin = useRef(false);
 
@@ -189,6 +193,7 @@ export function useGameState() {
     preWinChainSides: null,
     nextPuzzleAt: null,
     serverOffset: 0,
+    lastAddedNodeId: null,
   });
 
   // Tüm benzerlik sonuçlarını sakla (her kelime için)
@@ -289,6 +294,7 @@ export function useGameState() {
         isSolved: saved.isSolved,
         nextPuzzleAt: puzzle.next_puzzle_at,
         serverOffset,
+        lastAddedNodeId: saved.guessedWords.length > 0 ? saved.guessedWords[saved.guessedWords.length - 1] : null,
       });
     }
 
@@ -330,6 +336,7 @@ export function useGameState() {
           links,
           guessCount: saved.guessCount,
           isSolved: saved.isSolved,
+          lastAddedNodeId: saved.guessedWords.length > 0 ? saved.guessedWords[saved.guessedWords.length - 1] : null,
         }));
         return;
       }
@@ -347,7 +354,7 @@ export function useGameState() {
       setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: 'Sunucuya bağlanılamadı. Lütfen sunucunun çalıştığından emin olun.',
+        error: 'Sunucu güncelleniyor, lütfen daha sonra tekrar deneyin.',
       }));
     }
   }, [clearPracticeGameState, loadPracticeGameState, rebuildSavedBoard, updateChainSides]);
@@ -368,7 +375,7 @@ export function useGameState() {
           setState((prev) => ({
             ...prev,
             isLoading: false,
-            error: 'Sunucuya bağlanılamadı. Lütfen sunucunun çalıştığından emin olun.',
+            error: 'Sunucu güncelleniyor, lütfen daha sonra tekrar deneyin.',
           }));
         }
       }
@@ -410,7 +417,7 @@ export function useGameState() {
   /* ---------- Kelime tahmin et ---------- */
   const addWord = useCallback(
     async (word: string) => {
-      const w = word.trim().toLowerCase();
+      let w = word.trim().replace('İ', 'i').replace('I', 'ı').toLowerCase();
       if (!w || state.isSolved) return;
 
       // En az 2 karakter kontrolü
@@ -429,7 +436,7 @@ export function useGameState() {
 
       try {
         const boardWords = state.nodes.map((n) => n.id);
-        const result = await submitGuess(w, boardWords);
+        const result = await submitGuess(w, boardWords, username);
 
         // Benzerlik sonuçlarını sakla
         allSimilaritiesRef.current.set(w, result.similarities);
@@ -500,13 +507,17 @@ export function useGameState() {
 
           if (won && !hasRecordedWin.current) {
             hasRecordedWin.current = true;
+
+            // Shortest path detection (already computed below, but we need it here for recordSolve)
+            const adjForPath = buildAdjacency(newLinks);
+            const winPathLocal = findShortestPath(prev.wordA, prev.wordB, adjForPath);
+
             if (gameMode === 'daily') {
               recordWin(prev.puzzleDate, newGuessCount);
-              recordSolve(newGuessCount).catch(() => { });
+              recordSolve(newGuessCount, winPathLocal, 'daily', username).catch(() => { });
             } else {
               recordPracticeWin(newGuessCount);
-              // Pratik modda da global stats'a (sabit 2003-05-26 tarihine) kaydediyoruz
-              recordSolve(newGuessCount, true).catch(() => { });
+              recordSolve(newGuessCount, winPathLocal, 'practice', username).catch(() => { });
             }
           }
 
@@ -538,6 +549,7 @@ export function useGameState() {
             winAnimationPhase: won ? 'highlighting' : 'idle',
             winShortestPath: won ? winPath : null,
             preWinChainSides: preWinSides,
+            lastAddedNodeId: w,
           };
         });
       } catch (err: any) {
@@ -558,7 +570,7 @@ export function useGameState() {
           }
         } else if (err.request) {
           // İstek yapıldı ama yanıt alınamadı (İnternet yok veya sunucu kapalı)
-          message = 'Sunucuya ulaşılamıyor. Lütfen internetinizi kontrol edin.';
+          message = 'Sunucu güncelleniyor, lütfen daha sonra tekrar deneyin.';
         } else {
           // İstek kurulurken bir hata oluştu
           message = err.message || message;
@@ -567,7 +579,7 @@ export function useGameState() {
         setState((prev) => ({ ...prev, isGuessing: false, error: message }));
       }
     },
-    [state.nodes, state.isSolved, updateChainSides, checkWin, saveGameState, recordWin, recordPracticeWin, gameMode, savePracticeGameState]
+    [state.nodes, state.isSolved, updateChainSides, checkWin, saveGameState, recordWin, recordPracticeWin, gameMode, savePracticeGameState, username]
   );
 
   /* ---------- Düğüm seçimi ---------- */
@@ -597,7 +609,7 @@ export function useGameState() {
           .filter((id) => id !== nodeId);
         if (boardWords.length === 0) return;
 
-        const result = await fetchSimilarities(nodeId, boardWords);
+        const result = await fetchSimilarities(nodeId, boardWords, username);
         allSimilaritiesRef.current.set(nodeId, result.similarities);
         setState((prev) => ({
           ...prev,
@@ -607,7 +619,7 @@ export function useGameState() {
         // Benzerlik hesaplanamadı
       }
     },
-    [state.nodes]
+    [state.nodes, username]
   );
 
   /* ---------- Banner kapatma ---------- */
@@ -624,11 +636,43 @@ export function useGameState() {
     }));
   }, []);
 
+  /* ---------- Günlük rekor bilgisi ---------- */
+  const [dailyRecordHolder, setDailyRecordHolder] = useState<{
+    username: string | null;
+    path: string | null;
+    minGuesses: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (gameMode !== 'daily' || state.isLoading) return;
+
+    const doFetch = () => {
+      fetchStats('daily').then((gs) => {
+        setDailyRecordHolder({
+          username: gs.min_guesses_username,
+          path: gs.min_guesses_path,
+          minGuesses: gs.min_guesses,
+        });
+      }).catch(() => { });
+    };
+
+    doFetch();
+
+    // Yeni çözüm sonrası sunucunun kaydı tamamlamasını bekle
+    if (state.isSolved) {
+      const timer = setTimeout(doFetch, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameMode, state.isLoading, state.isSolved]);
+
   return {
     ...state,
     gameMode,
     stats,
     practiceStats,
+    username,
+    setUsername,
+    dailyRecordHolder,
     addWord,
     selectNode,
     closeWinBanner,

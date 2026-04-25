@@ -27,6 +27,13 @@ const COLORS = {
   path: { stroke: '#059669', fill: '#ecfdf5', text: '#065f46' },
 };
 
+const COLORS_SELECTED = {
+  a: { stroke: '#2563eb', fill: '#dbeafe', text: '#1e40af' },
+  b: { stroke: '#dc2626', fill: '#fee2e2', text: '#991b1b' },
+  both: { stroke: '#7c3aed', fill: '#ede9fe', text: '#5b21b6' },
+  none: { stroke: '#9ca3af', fill: '#f3f4f6', text: '#4b5563' },
+};
+
 // Purple target for the color transition during win animation
 const PURPLE_COLOR = { stroke: '#7c3aed', fill: '#f5f3ff', text: '#5b21b6' };
 
@@ -43,9 +50,10 @@ function lerpColor(hex1: string, hex2: string, t: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-function getNodeColor(node: GraphNode, isOnPath: boolean) {
+function getNodeColor(node: GraphNode, isOnPath: boolean, isSelected: boolean) {
   if (isOnPath) return COLORS.path;
-  return COLORS[node.chainSide] ?? COLORS.none;
+  const palette = isSelected ? COLORS_SELECTED : COLORS;
+  return palette[node.chainSide] ?? palette.none;
 }
 
 /** Returns a blended color for non-path nodes during the win animation (towards purple) */
@@ -566,7 +574,7 @@ export default function GraphCanvas({
     } else if (isOnPath) {
       colors = COLORS.path;
     } else {
-      colors = getNodeColor(node, false);
+      colors = getNodeColor(node, false, isSelected);
     }
 
     // Pulsating glow for the latest revealed node
@@ -589,8 +597,8 @@ export default function GraphCanvas({
     ctx.fillStyle = colors.fill;
     ctx.fill();
     ctx.strokeStyle = colors.stroke;
-    ctx.lineWidth = isStarting || isOnPath || isSelected || isLatestRevealed ? 2.5 : 1.5;
-    ctx.stroke();
+     ctx.lineWidth = isStarting || isOnPath || isSelected || isLatestRevealed ? 2.5 : 1.5;
+     ctx.stroke();
 
     ctx.fillStyle = colors.text;
     ctx.font = `${isStarting || isSelected ? '600' : '500'} 11px Inter, sans-serif`;
