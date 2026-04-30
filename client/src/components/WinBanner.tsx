@@ -1,6 +1,5 @@
 import type { PlayerStats, PracticeStats } from '../hooks/useLocalStorage';
 import type { GameMode } from '../hooks/useGameState';
-import AdUnit from './AdUnit';
 import { computeAverageFromDistribution } from '../utils/stats';
 import { Trophy } from 'lucide-react';
 
@@ -62,15 +61,6 @@ export default function WinBanner({ guessCount, stats, practiceStats, gameMode, 
           ) : null}
         </div>
 
-        {/* Win Banner Ad */}
-        <div className="win-banner-ad">
-          <AdUnit
-            slotId="9301472260"
-            format="horizontal"
-            responsive={true}
-            style={{ minHeight: '90px' }}
-          />
-        </div>
 
         <div className="win-banner__actions">
           {isVsHost && onNewVsGame && (

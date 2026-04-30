@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { User, Calendar, Swords, Users, X } from 'lucide-react';
 import type { PlayerStats, PracticeStats, VsStats } from '../hooks/useLocalStorage';
-import AdUnit from './AdUnit';
 import { computeAverageFromDistribution } from '../utils/stats';
 
 interface ProfileModalProps {
@@ -51,17 +50,8 @@ export default function ProfileModal({ stats, practiceStats, vsStats, gameMode, 
 
   return (
     <div className="profile-overlay" onClick={onClose}>
-      <div className="modal-ad-wrapper" onClick={(e) => e.stopPropagation()}>
-        {/* Left Ad */}
-        <div className="modal-ad-side modal-ad-side--left">
-          <AdUnit
-            slotId="2380840697"
-            format="vertical"
-            style={{ width: '160px', height: '600px' }}
-          />
-        </div>
 
-        <div className="profile-modal">
+        <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
           {/* Close button */}
           <button className="profile-modal__close-x" onClick={onClose} aria-label="Kapat">
             <X size={18} />
@@ -181,16 +171,6 @@ export default function ProfileModal({ stats, practiceStats, vsStats, gameMode, 
             Kapat
           </button>
         </div>
-
-        {/* Right Ad */}
-        <div className="modal-ad-side modal-ad-side--right">
-          <AdUnit
-            slotId="2772570390"
-            format="vertical"
-            style={{ width: '160px', height: '600px' }}
-          />
-        </div>
       </div>
-    </div>
   );
 }

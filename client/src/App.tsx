@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users } from 'lucide-react';
+import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users, ArrowUp } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useVsMode } from './hooks/useVsMode';
@@ -14,6 +14,7 @@ import VsModeModal from './components/VsModeModal';
 import VsRoomModal from './components/VsRoomModal';
 import VsGameOverModal from './components/VsGameOverModal';
 import VsRematchModal from './components/VsRematchModal';
+import CookieBanner from './components/CookieBanner';
 import './index.css';
 
 export default function App() {
@@ -131,7 +132,7 @@ export default function App() {
     if (vsMode.status === 'finished' && !hasSeenGameOver && gameMode === 'vs') {
       const didWin = vsMode.winnerInfo?.username === username;
       recordVsGame(didWin, didWin ? vsMode.winnerInfo?.guesses : undefined);
-      
+
       if (vsMode.winnerInfo?.username !== username) {
         setShowVsGameOverModal(true);
       }
@@ -400,6 +401,58 @@ export default function App() {
           style={{ height: '90px' }}
         />
       </div>
+
+      <CookieBanner />
+
+      {/* SEO & Content Section for AdSense */}
+      <section className="seo-content-section">
+        <div className="seo-content-container">
+          <h2>KelimeLink: Türkçe Kelime Bağlantı Bulmacası</h2>
+          <p>
+            KelimeLink, zekanızı ve kelime dağarcığınızı test eden bir Türkçe kelime oyunudur.
+            Oyunun temel amacı, size verilen iki uzak kelime (örneğin "Güneş" ve "Kitap") arasında
+            anlamsal bağlantılar kurarak bir yol oluşturmaktır. Her yeni kelime eklediğinizde,
+            sistemimiz bu kelimenin mevcut kelimelerle olan anlamsal benzerliğini hesaplar.
+            Eğer benzerlik belirli bir eşiğin üzerindeyse, kelimeler arasında bir bağ oluşur.
+          </p>
+          <p>
+            Bu oyun, yapay zeka ve doğal dil işleme (NLP) algoritmalarını kullanarak kelimeler arasındaki
+            anlamsal ilişkileri tespit eder. Günlük bulmacada her gün yeni bir çift kelime sunulurken,
+            Pratik modunda sınırsız sayıda deneme yapabilir ve kendinizi geliştirebilirsiniz.
+            Ayrıca arkadaşlarınızla VS modunda gerçek zamanlı olarak yarışabilirsiniz.
+          </p>
+          <h3>Nasıl Oynanır?</h3>
+          <ul>
+            <li>Başlangıç ve hedef kelimeyi inceleyin.</li>
+            <li>İki kelimeyi birbirine bağlayacağını düşündüğünüz yeni kelimeler girin.</li>
+            <li>Kelimeler arasında %26 ve üzeri benzerlik olduğunda bağlantı kurulur.</li>
+            <li>Hedef kelimeye en az sayıda hamleyle ulaşmaya çalışın.</li>
+          </ul>
+        </div>
+        <button
+          className="back-to-top-btn"
+          onClick={() => {
+            const layout = document.querySelector('.app-layout');
+            if (layout) layout.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        >
+          <ArrowUp size={18} /> Yukarı Dön
+        </button>
+      </section>
+
+
+      <footer className="app-footer">
+        <div className="app-footer__content">
+          <div className="app-footer__copyright">
+            © 2026 KelimeLink. Tüm hakları saklıdır.
+          </div>
+          <div className="app-footer__links">
+            <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Gizlilik Politikası</a>
+            <a href="/terms.html" target="_blank" rel="noopener noreferrer">Kullanım Şartları</a>
+            <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
