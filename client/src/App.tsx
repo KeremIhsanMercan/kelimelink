@@ -398,15 +398,6 @@ export default function App() {
       <section className="seo-content-section">
         <div className="seo-content-container">
           <h2>KelimeLink: Türkçe Kelime Bağlantı Bulmacası</h2>
-          
-          <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'center' }}>
-            <AdUnit
-              slotId="5519199413"
-              format="horizontal"
-              responsive={true}
-              style={{ width: '100%', minHeight: '90px' }}
-            />
-          </div>
 
           <p>
             KelimeLink, zekanızı ve kelime dağarcığınızı test eden bir Türkçe kelime oyunudur.
@@ -421,6 +412,16 @@ export default function App() {
             Pratik modunda sınırsız sayıda deneme yapabilir ve kendinizi geliştirebilirsiniz.
             Ayrıca arkadaşlarınızla VS modunda gerçek zamanlı olarak yarışabilirsiniz.
           </p>
+
+          <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'center' }}>
+            <AdUnit
+              slotId="5519199413"
+              format="horizontal"
+              responsive={true}
+              style={{ width: '100%', minHeight: '90px' }}
+            />
+          </div>
+
           <h3>Nasıl Oynanır?</h3>
           <ul>
             <li>Başlangıç ve hedef kelimeyi inceleyin.</li>
