@@ -392,22 +392,22 @@ export default function App() {
         />
       )}
 
-      {/* Sticky Bottom Ad */}
-      <div className="sticky-bottom-ad">
-        <AdUnit
-          slotId="5519199413"
-          format="horizontal"
-          responsive={true}
-          style={{ height: '90px' }}
-        />
-      </div>
-
       <CookieBanner />
 
       {/* SEO & Content Section for AdSense */}
       <section className="seo-content-section">
         <div className="seo-content-container">
           <h2>KelimeLink: Türkçe Kelime Bağlantı Bulmacası</h2>
+          
+          <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'center' }}>
+            <AdUnit
+              slotId="5519199413"
+              format="horizontal"
+              responsive={true}
+              style={{ width: '100%', minHeight: '90px' }}
+            />
+          </div>
+
           <p>
             KelimeLink, zekanızı ve kelime dağarcığınızı test eden bir Türkçe kelime oyunudur.
             Oyunun temel amacı, size verilen iki uzak kelime (örneğin "Güneş" ve "Kitap") arasında

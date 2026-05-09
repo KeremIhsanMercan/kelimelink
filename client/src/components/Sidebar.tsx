@@ -3,7 +3,6 @@ import type { SimilarityResult } from '../services/api';
 import { submitCustomLinkReport } from '../services/api';
 
 import type { GameMode, GraphNode } from '../hooks/useGameState';
-import AdUnit from './AdUnit';
 import { Trophy, HelpCircle, Plus } from 'lucide-react';
 
 interface SidebarProps {
@@ -373,14 +372,6 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Sidebar Ad */}
-      <div className="sidebar-ad">
-        <AdUnit
-          slotId="4623860650"
-          format="rectangle"
-          responsive={true}
-        />
-      </div>
 
       {reportModalOpen && (
         <div className={`report-modal-overlay ${reportModalClosing ? 'closing' : ''}`}>
