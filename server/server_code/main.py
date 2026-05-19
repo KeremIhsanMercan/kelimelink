@@ -4,6 +4,7 @@ KelimeLink FastAPI Sunucusu
 """
 
 import os
+import asyncio
 from datetime import datetime, timedelta, timezone
 from contextlib import asynccontextmanager
 from collections import OrderedDict
@@ -81,17 +82,40 @@ async def verify_admin(x_api_key: str = Header(None)):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("[Sunucu] Başlatılıyor...")
+    
+    # Initialize empty state immediately so endpoints can respond (instantly passing port checks)
+    app.state.word_vectors = {}
+    app.state.normalized_vectors = {}
+    app.state.custom_links_dict = {}
+    app.state.guess_cache = OrderedDict()
+    app.state.guess_counts = {}
+    app.state.vectors_loaded = False
+
+    # Initialize DB (takes ~0.05s)
     try:
         init_tables()
     except Exception as e:
         logger.error(f"[Sunucu] DB tabloları oluşturulamadı: {e}")
 
-    app.state.custom_links_dict = get_all_custom_links()
-    app.state.word_vectors = load_vectors(CSV_PATH)
-    app.state.normalized_vectors = build_normalized_vectors(app.state.word_vectors)
-    app.state.guess_cache = OrderedDict()
-    app.state.guess_counts = {}
-    logger.info(f"[Sunucu] {len(app.state.word_vectors)} kelime vektörü bellekte hazır.")
+    # Load custom links and vectors in a non-blocking background task using thread pools
+    async def load_all_data_background():
+        try:
+            loop = asyncio.get_running_loop()
+            custom_links = await loop.run_in_executor(None, get_all_custom_links)
+            app.state.custom_links_dict = custom_links
+            
+            word_vectors = await loop.run_in_executor(None, load_vectors, CSV_PATH)
+            normalized_vectors = await loop.run_in_executor(None, build_normalized_vectors, word_vectors)
+            
+            app.state.word_vectors = word_vectors
+            app.state.normalized_vectors = normalized_vectors
+            app.state.vectors_loaded = True
+            logger.info(f"[Sunucu] {len(word_vectors)} kelime vektörü arka planda hazırlandı.")
+        except Exception as err:
+            logger.error(f"[Sunucu] Arka planda veri yükleme hatası: {err}")
+
+    asyncio.create_task(load_all_data_background())
+    asyncio.create_task(vs_manager.cleanup_rooms())
     yield
     logger.info("[Sunucu] Kapatılıyor...")
 
@@ -199,11 +223,11 @@ async def health(request: Request):
 
 @app.get("/api/daily-puzzle")
 async def daily_puzzle(request: Request):
-    word_vectors = request.app.state.word_vectors
     now = datetime.now(timezone.utc)
     today = now.date()
     next_puzzle_at = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
+    # First attempt: Try getting from DB (doesn't require word_vectors, returns instantly)
     puzzle = get_daily_puzzle(today)
     if puzzle:
         return {
@@ -214,6 +238,11 @@ async def daily_puzzle(request: Request):
             "next_puzzle_at": next_puzzle_at.isoformat(),
         }
 
+    # Second attempt: Generate it, which requires word_vectors to be fully loaded
+    if not getattr(request.app.state, "vectors_loaded", False):
+        raise HTTPException(status_code=503, detail="Sözlük yükleniyor, lütfen birkaç saniye sonra tekrar deneyin.")
+
+    word_vectors = request.app.state.word_vectors
     seed = int(today.strftime("%Y%m%d"))
     custom_links_dict = request.app.state.custom_links_dict
     word_a, word_b = pick_daily_pair(word_vectors, custom_links_dict, seed=seed)
@@ -257,6 +286,8 @@ async def archive_puzzles(limit: int = 30):
 
 @app.get("/api/practice-puzzle")
 async def practice_puzzle(request: Request):
+    if not getattr(request.app.state, "vectors_loaded", False):
+        raise HTTPException(status_code=503, detail="Sözlük yükleniyor, lütfen birkaç saniye sonra tekrar deneyin.")
     word_vectors = request.app.state.word_vectors
     custom_links_dict = request.app.state.custom_links_dict
     word_a, word_b = pick_practice_pair(word_vectors, custom_links_dict)
@@ -265,6 +296,8 @@ async def practice_puzzle(request: Request):
 
 @app.post("/api/guess")
 async def guess(req: GuessRequest, request: Request):
+    if not getattr(request.app.state, "vectors_loaded", False):
+        raise HTTPException(status_code=503, detail="Sözlük yükleniyor, lütfen birkaç saniye sonra tekrar deneyin.")
     word = normalize_word(req.word)
     board_words = [normalize_word(w) for w in req.board_words]
     word_vectors = request.app.state.word_vectors
@@ -319,6 +352,8 @@ async def stats(gamemode: str = Query(default="daily", max_length=50)):
 
 @app.post("/api/similarities")
 async def similarities(req: GuessRequest, request: Request):
+    if not getattr(request.app.state, "vectors_loaded", False):
+        raise HTTPException(status_code=503, detail="Sözlük yükleniyor, lütfen birkaç saniye sonra tekrar deneyin.")
     word = normalize_word(req.word)
     board_words = [normalize_word(w) for w in req.board_words if normalize_word(w) != word]
     word_vectors = request.app.state.word_vectors
@@ -331,6 +366,8 @@ async def similarities(req: GuessRequest, request: Request):
 
 @app.post("/api/rebuild-board")
 async def rebuild_board(req: RebuildRequest, request: Request):
+    if not getattr(request.app.state, "vectors_loaded", False):
+        raise HTTPException(status_code=503, detail="Sözlük yükleniyor, lütfen birkaç saniye sonra tekrar deneyin.")
     word_vectors = request.app.state.word_vectors
     custom_links_dict = request.app.state.custom_links_dict
     all_words = [req.word_a, req.word_b] + req.guessed_words
@@ -339,6 +376,8 @@ async def rebuild_board(req: RebuildRequest, request: Request):
 
 @app.post("/api/hint")
 async def get_hint(req: HintRequest, request: Request):
+    if not getattr(request.app.state, "vectors_loaded", False):
+        raise HTTPException(status_code=503, detail="Sözlük yükleniyor, lütfen birkaç saniye sonra tekrar deneyin.")
     word_a = normalize_word(req.word_a)
     word_b = normalize_word(req.word_b)
     
@@ -363,6 +402,8 @@ async def get_hint(req: HintRequest, request: Request):
 
 @app.get("/api/check-word/{word}")
 async def check_word(request: Request, word: str = Path(..., max_length=100)):
+    if not getattr(request.app.state, "vectors_loaded", False):
+        raise HTTPException(status_code=503, detail="Sözlük yükleniyor, lütfen birkaç saniye sonra tekrar deneyin.")
     word_vectors = request.app.state.word_vectors
     word = normalize_word(word)
     return {"word": word, "exists": word in word_vectors}

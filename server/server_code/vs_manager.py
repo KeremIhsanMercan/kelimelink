@@ -164,10 +164,8 @@ async def cleanup_rooms():
         except Exception as e:
             logger.error(f"[VS] Cleanup hatası: {e}")
 
-# Start only local cleanup in the background (no DB access here)
-@router.on_event("startup")
-async def startup_event():
-    asyncio.create_task(cleanup_rooms())
+# NOTE: cleanup_rooms() is started from main.py lifespan, not via @router.on_event("startup")
+# because on_event is deprecated when using lifespan.
 
 _listen_task: Optional[asyncio.Task] = None
 
