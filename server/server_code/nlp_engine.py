@@ -52,15 +52,30 @@ def build_normalized_vectors(vectors: dict[str, np.ndarray]) -> dict[str, np.nda
 def load_vectors(csv_path: str) -> dict[str, np.ndarray]:
     """
     Vektör dosyasını belleğe yükler.
+    Hızlı yükleme için önce .pkl dosyasını kontrol eder.
     """
+    import pickle
     vectors: dict[str, np.ndarray] = {}
     abs_path = os.path.abspath(csv_path)
-    print(f"[NLP] Vektörler yükleniyor: {abs_path}")
+    pkl_path = abs_path + ".pkl"
 
+    # Hızlı yükleme için pickle dosyasını dene
+    if os.path.exists(pkl_path):
+        print(f"[NLP] Hızlı yükleme: Pickle formatında vektörler yükleniyor: {pkl_path}")
+        try:
+            with open(pkl_path, "rb") as f:
+                vectors = pickle.load(f)
+            print(f"[NLP] {len(vectors)} kelime pickle'dan yüklendi.")
+            return vectors
+        except Exception as e:
+            print(f"[NLP] Pickle yükleme hatası, CSV formatına dönülüyor: {e}")
+
+    # Pickle yoksa veya yüklenemediyse CSV'den oku
+    print(f"[NLP] Vektörler CSV'den yükleniyor: {abs_path}")
     try:
         with open(abs_path, "r", encoding="utf-8-sig") as f:
-            reader = csv.reader(f)
-            for row in reader:
+            for line in f:
+                row = line.strip().split(',')
                 if len(row) < 2:
                     continue
                 word = unicodedata.normalize('NFC', row[0].strip().lower())
@@ -74,7 +89,16 @@ def load_vectors(csv_path: str) -> dict[str, np.ndarray]:
         print(f"[NLP] HATA: Vektör dosyası bulunamadı: {abs_path}")
         return {}
 
-    print(f"[NLP] {len(vectors)} kelime yüklendi.")
+    print(f"[NLP] {len(vectors)} kelime CSV'den yüklendi.")
+
+    # Sonraki seferler için pickle olarak kaydet
+    try:
+        with open(pkl_path, "wb") as f:
+            pickle.dump(vectors, f, protocol=pickle.HIGHEST_PROTOCOL)
+        print(f"[NLP] Vektörler hızlı yükleme için pickle olarak kaydedildi: {pkl_path}")
+    except Exception as e:
+        print(f"[NLP] Vektörleri pickle olarak kaydetme hatası: {e}")
+
     return vectors
 
 

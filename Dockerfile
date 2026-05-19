@@ -37,6 +37,9 @@ COPY --chown=user server/semantics_dataset/ ./server/semantics_dataset/
 # Copy built frontend from Stage 1 into the backend's static directory
 COPY --chown=user --from=frontend-builder /app/client/dist ./server/server_code/static
 
+# Pre-compile CSV vectors to Pickle for instant startup
+RUN PYTHONPATH=/home/user/app/server/server_code python -c "from nlp_engine import load_vectors; load_vectors('/home/user/app/server/semantics_dataset/numberbatch_temiz.csv')"
+
 # Set environment variables
 ENV CSV_PATH="/home/user/app/server/semantics_dataset/numberbatch_temiz.csv"
 ENV PYTHONUNBUFFERED=1

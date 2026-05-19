@@ -89,7 +89,7 @@ def _drop_all_constraints_of_type(cur, table: str, con_type: str):
                 WHERE conrelid = %s::regclass
                   AND contype = %s
             LOOP
-                EXECUTE 'ALTER TABLE ' || quote_ident(%s) || ' DROP CONSTRAINT ' || quote_ident(r.conname);
+                EXECUTE 'ALTER TABLE ' || quote_ident(%s) || ' DROP CONSTRAINT IF EXISTS ' || quote_ident(r.conname);
             END LOOP;
         END $$;
     """
@@ -98,104 +98,142 @@ def _drop_all_constraints_of_type(cur, table: str, con_type: str):
 
 def init_tables():
     """Gerekli tabloları oluşturur (yoksa) ve mevcut tabloları migrate eder."""
-    with get_cursor() as cur:
-        # Schema definition
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS daily_puzzles (
-                puzzle_date DATE PRIMARY KEY,
-                word_a TEXT NOT NULL,
-                word_b TEXT NOT NULL
-            );
-            
-            CREATE TABLE IF NOT EXISTS global_stats (
-                puzzle_date DATE NOT NULL,
-                gamemode TEXT NOT NULL DEFAULT 'daily',
-                total_solves INT DEFAULT 0,
-                total_guesses INT DEFAULT 0,
-                min_guesses INT DEFAULT 0,
-                min_guesses_username TEXT,
-                min_guesses_path TEXT,
-                PRIMARY KEY (puzzle_date, gamemode)
-            );
+    try:
+        with get_cursor() as cur:
+            # Schema definition
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS daily_puzzles (
+                    puzzle_date DATE PRIMARY KEY,
+                    word_a TEXT NOT NULL,
+                    word_b TEXT NOT NULL
+                );
+                
+                CREATE TABLE IF NOT EXISTS global_stats (
+                    puzzle_date DATE NOT NULL,
+                    gamemode TEXT NOT NULL DEFAULT 'daily',
+                    total_solves INT DEFAULT 0,
+                    total_guesses INT DEFAULT 0,
+                    min_guesses INT DEFAULT 0,
+                    min_guesses_username TEXT,
+                    min_guesses_path TEXT,
+                    PRIMARY KEY (puzzle_date, gamemode)
+                );
 
-            CREATE TABLE IF NOT EXISTS custom_link_requests (
-                id SERIAL PRIMARY KEY,
-                word_a TEXT NOT NULL,
-                word_b TEXT NOT NULL,
-                reason TEXT NOT NULL,
-                username TEXT
-            );
+                CREATE TABLE IF NOT EXISTS custom_link_requests (
+                    id SERIAL PRIMARY KEY,
+                    word_a TEXT NOT NULL,
+                    word_b TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    username TEXT
+                );
 
-            CREATE TABLE IF NOT EXISTS custom_links (
-                id SERIAL PRIMARY KEY,
-                word_a TEXT NOT NULL,
-                word_b TEXT NOT NULL,
-                UNIQUE (word_a, word_b)
-            );
+                CREATE TABLE IF NOT EXISTS custom_links (
+                    id SERIAL PRIMARY KEY,
+                    word_a TEXT NOT NULL,
+                    word_b TEXT NOT NULL,
+                    UNIQUE (word_a, word_b)
+                );
 
-            CREATE TABLE IF NOT EXISTS vs_rooms (
-                room_code TEXT PRIMARY KEY,
-                word_a TEXT NOT NULL,
-                word_b TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'waiting',
-                winner_info JSONB,
-                players JSONB DEFAULT '[]'::jsonb,
-                banned_words TEXT,
-                last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
+                CREATE TABLE IF NOT EXISTS vs_rooms (
+                    room_code TEXT PRIMARY KEY,
+                    word_a TEXT NOT NULL,
+                    word_b TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'waiting',
+                    winner_info JSONB,
+                    players JSONB DEFAULT '[]'::jsonb,
+                    banned_words TEXT,
+                    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+    except Exception as e:
+        print(f"[DB] Tablolar oluşturulurken hata (muhtemelen paralel işlem): {e}")
 
-        # Migration logic
-        _run_migrations(cur)
+    # Migration logic
+    _run_migrations()
 
     print("[DB] Tablolar ve veritabanı hazır.")
 
 
-def _run_migrations(cur):
+def _run_migrations():
     """Mevcut tabloları yeni şemaya uyumlu hale getirir."""
     # global_stats migration
-    if not _column_exists(cur, "global_stats", "gamemode"):
-        cur.execute("ALTER TABLE global_stats ADD COLUMN gamemode TEXT NOT NULL DEFAULT 'daily';")
-        print("[DB] Migration: global_stats.gamemode eklendi.")
+    try:
+        with get_cursor() as cur:
+            cur.execute("ALTER TABLE global_stats ADD COLUMN IF NOT EXISTS gamemode TEXT NOT NULL DEFAULT 'daily';")
+    except Exception as e:
+        print(f"[DB] Migration Hata (gamemode): {e}")
 
-    if _column_exists(cur, "global_stats", "id"):
-        _drop_all_constraints_of_type(cur, "global_stats", "p")
-        cur.execute("ALTER TABLE global_stats DROP COLUMN id;")
-        print("[DB] Migration: global_stats.id kaldırıldı.")
+    try:
+        with get_cursor() as cur:
+            if _column_exists(cur, "global_stats", "id"):
+                _drop_all_constraints_of_type(cur, "global_stats", "p")
+                cur.execute("ALTER TABLE global_stats DROP COLUMN IF EXISTS id;")
+    except Exception as e:
+        print(f"[DB] Migration Hata (global_stats id): {e}")
 
-    if _column_exists(cur, "global_stats", "updated_at"):
-        cur.execute("ALTER TABLE global_stats DROP COLUMN updated_at;")
+    try:
+        with get_cursor() as cur:
+            cur.execute("ALTER TABLE global_stats DROP COLUMN IF EXISTS updated_at;")
+    except Exception as e:
+        print(f"[DB] Migration Hata (updated_at): {e}")
 
-    _drop_all_constraints_of_type(cur, "global_stats", "u")
+    try:
+        with get_cursor() as cur:
+            _drop_all_constraints_of_type(cur, "global_stats", "u")
+    except Exception as e:
+        print(f"[DB] Migration Hata (global_stats unique constraints): {e}")
 
-    if not _constraint_exists(cur, "global_stats", "global_stats_pkey"):
-        cur.execute("ALTER TABLE global_stats ADD PRIMARY KEY (puzzle_date, gamemode);")
+    try:
+        with get_cursor() as cur:
+            if not _constraint_exists(cur, "global_stats", "global_stats_pkey"):
+                cur.execute("ALTER TABLE global_stats ADD PRIMARY KEY (puzzle_date, gamemode);")
+    except Exception:
+        # Hata durumunu yoksay (örneğin pkey zaten varsa)
+        pass
 
-    for col in ["min_guesses_username", "min_guesses_path"]:
-        if not _column_exists(cur, "global_stats", col):
-            cur.execute(f"ALTER TABLE global_stats ADD COLUMN {col} TEXT;")
+    try:
+        with get_cursor() as cur:
+            for col in ["min_guesses_username", "min_guesses_path"]:
+                cur.execute(f"ALTER TABLE global_stats ADD COLUMN IF NOT EXISTS {col} TEXT;")
+    except Exception as e:
+        print(f"[DB] Migration Hata (min_guesses): {e}")
 
     # daily_puzzles migration
-    if _column_exists(cur, "daily_puzzles", "id"):
-        _drop_all_constraints_of_type(cur, "daily_puzzles", "p")
-        _drop_all_constraints_of_type(cur, "daily_puzzles", "u")
-        cur.execute("ALTER TABLE daily_puzzles DROP COLUMN id;")
-        cur.execute("ALTER TABLE daily_puzzles ADD PRIMARY KEY (puzzle_date);")
+    try:
+        with get_cursor() as cur:
+            if _column_exists(cur, "daily_puzzles", "id"):
+                _drop_all_constraints_of_type(cur, "daily_puzzles", "p")
+                _drop_all_constraints_of_type(cur, "daily_puzzles", "u")
+                cur.execute("ALTER TABLE daily_puzzles DROP COLUMN IF EXISTS id;")
+                cur.execute("ALTER TABLE daily_puzzles ADD PRIMARY KEY (puzzle_date);")
+    except Exception as e:
+        print(f"[DB] Migration Hata (daily_puzzles id): {e}")
 
-    if _column_exists(cur, "daily_puzzles", "created_at"):
-        cur.execute("ALTER TABLE daily_puzzles DROP COLUMN created_at;")
+    try:
+        with get_cursor() as cur:
+            cur.execute("ALTER TABLE daily_puzzles DROP COLUMN IF EXISTS created_at;")
+    except Exception as e:
+        print(f"[DB] Migration Hata (created_at): {e}")
 
     # custom_link_requests migration
-    if not _column_exists(cur, "custom_link_requests", "username"):
-        cur.execute("ALTER TABLE custom_link_requests ADD COLUMN username TEXT;")
+    try:
+        with get_cursor() as cur:
+            cur.execute("ALTER TABLE custom_link_requests ADD COLUMN IF NOT EXISTS username TEXT;")
+    except Exception as e:
+        print(f"[DB] Migration Hata (custom_link_requests username): {e}")
 
     # vs_rooms migration
-    if not _column_exists(cur, "vs_rooms", "players"):
-        cur.execute("ALTER TABLE vs_rooms ADD COLUMN players JSONB DEFAULT '[]'::jsonb;")
-        print("[DB] Migration: vs_rooms.players eklendi.")
-    if not _column_exists(cur, "vs_rooms", "banned_words"):
-        cur.execute("ALTER TABLE vs_rooms ADD COLUMN banned_words TEXT;")
-        print("[DB] Migration: vs_rooms.banned_words eklendi.")
+    try:
+        with get_cursor() as cur:
+            cur.execute("ALTER TABLE vs_rooms ADD COLUMN IF NOT EXISTS players JSONB DEFAULT '[]'::jsonb;")
+    except Exception as e:
+        print(f"[DB] Migration Hata (vs_rooms players): {e}")
+
+    try:
+        with get_cursor() as cur:
+            cur.execute("ALTER TABLE vs_rooms ADD COLUMN IF NOT EXISTS banned_words TEXT;")
+    except Exception as e:
+        print(f"[DB] Migration Hata (vs_rooms banned_words): {e}")
 
 
 def get_daily_puzzle(today: date) -> dict | None:
