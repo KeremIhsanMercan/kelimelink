@@ -3,7 +3,7 @@ import { X, RefreshCw } from 'lucide-react';
 
 interface VsRematchModalProps {
   onClose: () => void;
-  onRestart: (wordA: string, wordB: string) => void;
+  onRestart: (wordA: string, wordB: string, bannedWords: string) => void;
   vsError: string | null;
   onClearVsError: () => void;
   isLoading: boolean;
@@ -12,9 +12,10 @@ interface VsRematchModalProps {
 export default function VsRematchModal({ onClose, onRestart, vsError, onClearVsError, isLoading }: VsRematchModalProps) {
   const [wordA, setWordA] = useState('');
   const [wordB, setWordB] = useState('');
+  const [bannedWords, setBannedWords] = useState('');
 
   const handleRestart = () => {
-    onRestart(wordA, wordB);
+    onRestart(wordA, wordB, bannedWords);
   };
 
   return (
@@ -54,6 +55,16 @@ export default function VsRematchModal({ onClose, onRestart, vsError, onClearVsE
                 onChange={(e) => { setWordB(e.target.value); onClearVsError(); }}
                 placeholder="Rastgele gelmesi için boş bırakınız..."
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', outline: 'none', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#dc2626', marginBottom: '4px' }}>Yasaklı Kelimeler</label>
+              <input
+                type="text"
+                value={bannedWords}
+                onChange={(e) => { setBannedWords(e.target.value); onClearVsError(); }}
+                placeholder="Boşluk bırakarak yazınız..."
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: '#dc2626', outline: 'none', fontFamily: 'inherit' }}
               />
             </div>
             {vsError && <div style={{ color: '#dc2626', fontSize: '13px', textAlign: 'center' }}>{vsError}</div>}

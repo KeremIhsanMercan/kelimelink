@@ -111,13 +111,13 @@ export default function App() {
     if (vsMode.status === 'playing' && vsMode.wordA && vsMode.wordB) {
       // If we are transitioning to playing, we must ensure startVsGame is called
       // even if we are already in 'vs' gameMode (rematch case)
-      startVsGame(vsMode.wordA, vsMode.wordB);
+      startVsGame(vsMode.wordA, vsMode.wordB, vsMode.bannedWords);
       setShowVsModal(false);
       setShowVsRematchModal(false);
       setShowVsGameOverModal(false);
       setHasSeenGameOver(false);
     }
-  }, [vsMode.status, vsMode.wordA, vsMode.wordB, startVsGame]);
+  }, [vsMode.status, vsMode.wordA, vsMode.wordB, vsMode.bannedWords, startVsGame]);
 
   useEffect(() => {
     if (vsMode.status === 'waiting' && gameMode === 'vs') {
@@ -293,6 +293,7 @@ export default function App() {
           onAddWord={addWord}
           onSelectNode={selectNode}
           gameMode={gameMode}
+          bannedWords={vsMode.status !== 'disconnected' && vsMode.bannedWords ? vsMode.bannedWords : null}
           nextPuzzleAt={nextPuzzleAt}
           serverOffset={serverOffset}
           onTimerEnd={switchToDaily}
@@ -350,7 +351,7 @@ export default function App() {
       {showVsModal && vsMode.status === 'disconnected' && (
         <VsModeModal
           onClose={() => { vsMode.clearError(); setShowVsModal(false); }}
-          onCreateRoom={(a, b) => vsMode.createRoom(a, b)}
+          onCreateRoom={(a, b, bannedWords) => vsMode.createRoom(a, b, bannedWords)}
           onJoinRoom={(code) => vsMode.joinRoom(code)}
           vsError={vsMode.error}
           onClearVsError={vsMode.clearError}
@@ -363,6 +364,7 @@ export default function App() {
           roomCode={vsMode.roomCode}
           wordA={vsMode.wordA}
           wordB={vsMode.wordB}
+          bannedWords={vsMode.bannedWords}
           players={vsMode.players}
           isHost={vsMode.players[0] === username}
           status={vsMode.status as 'waiting' | 'finished'}
@@ -385,7 +387,7 @@ export default function App() {
       {showVsRematchModal && (
         <VsRematchModal
           onClose={() => setShowVsRematchModal(false)}
-          onRestart={(a, b) => vsMode.restartGame(a, b)}
+          onRestart={(a, b, bannedWords) => vsMode.restartGame(a, b, bannedWords)}
           vsError={vsMode.error}
           onClearVsError={vsMode.clearError}
           isLoading={vsMode.isLoading}
@@ -448,6 +450,7 @@ export default function App() {
             © 2026 KelimeLink. Tüm hakları saklıdır.
           </div>
           <div className="app-footer__links">
+            <a href="/archive">Bulmaca Arşivi</a>
             <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Gizlilik Politikası</a>
             <a href="/terms.html" target="_blank" rel="noopener noreferrer">Kullanım Şartları</a>
             <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>

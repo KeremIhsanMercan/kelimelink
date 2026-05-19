@@ -41,6 +41,7 @@ export interface GameState {
   nextPuzzleAt: string | null;
   serverOffset: number; // milliseconds
   lastAddedNodeId: string | null;
+  bannedWords: string[] | null;
 }
 
 interface BuildGameStateParams {
@@ -54,6 +55,7 @@ interface BuildGameStateParams {
   nextPuzzleAt?: string | null;
   serverOffset?: number;
   lastAddedNodeId?: string | null;
+  bannedWords?: string[] | null;
 }
 
 function createBaseNodes(wordA: string, wordB: string): GraphNode[] {
@@ -74,6 +76,7 @@ function buildGameState({
   nextPuzzleAt = null,
   serverOffset = 0,
   lastAddedNodeId = null,
+  bannedWords = null,
 }: BuildGameStateParams): GameState {
   return {
     isLoading: false,
@@ -95,6 +98,7 @@ function buildGameState({
     nextPuzzleAt,
     serverOffset,
     lastAddedNodeId,
+    bannedWords,
   };
 }
 
@@ -134,6 +138,7 @@ export function useGameState() {
     nextPuzzleAt: null,
     serverOffset: 0,
     lastAddedNodeId: null,
+    bannedWords: null,
   });
 
   const rebuildSavedBoard = useCallback(
@@ -272,11 +277,17 @@ export function useGameState() {
     await initPracticeGame(true);
   }, [initPracticeGame]);
 
-  const startVsGame = useCallback((wordA: string, wordB: string) => {
+  const startVsGame = useCallback((wordA: string, wordB: string, bannedWordsStr?: string | null) => {
     setGameMode('vs');
     allSimilaritiesRef.current = new Map();
     hasRecordedWin.current = false;
-    setState(buildGameState({ puzzleDate: '', wordA, wordB }));
+    
+    let bannedWords: string[] | null = null;
+    if (bannedWordsStr) {
+      bannedWords = bannedWordsStr.toLowerCase().split(/\s+/).filter(Boolean);
+    }
+    
+    setState(buildGameState({ puzzleDate: '', wordA, wordB, bannedWords }));
   }, []);
 
   const resetVsGame = useCallback(() => {
@@ -291,6 +302,7 @@ export function useGameState() {
       preWinChainSides: null,
       selectedNode: null,
       selectedNodeSimilarities: [],
+      bannedWords: null,
     }));
   }, []);
 
@@ -309,6 +321,10 @@ export function useGameState() {
       }
       if (state.nodes.some((n) => n.id === w)) {
         setState((prev) => ({ ...prev, error: `'${w}' zaten tahtada mevcut.` }));
+        return;
+      }
+      if (state.bannedWords && state.bannedWords.includes(w)) {
+        setState((prev) => ({ ...prev, error: `'${w}' bu oyun için yasaklı kelimelerden biridir.` }));
         return;
       }
 
@@ -421,6 +437,15 @@ export function useGameState() {
     path: string | null;
     minGuesses: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (state.error && state.nodes.length > 0) {
+      const timer = setTimeout(() => {
+        setState((prev) => ({ ...prev, error: null }));
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [state.error, state.nodes.length]);
 
   useEffect(() => {
     if (gameMode !== 'daily' || state.isLoading) return;

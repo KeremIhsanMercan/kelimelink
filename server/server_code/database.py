@@ -140,6 +140,7 @@ def init_tables():
                 status TEXT NOT NULL DEFAULT 'waiting',
                 winner_info JSONB,
                 players JSONB DEFAULT '[]'::jsonb,
+                banned_words TEXT,
                 last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -192,6 +193,9 @@ def _run_migrations(cur):
     if not _column_exists(cur, "vs_rooms", "players"):
         cur.execute("ALTER TABLE vs_rooms ADD COLUMN players JSONB DEFAULT '[]'::jsonb;")
         print("[DB] Migration: vs_rooms.players eklendi.")
+    if not _column_exists(cur, "vs_rooms", "banned_words"):
+        cur.execute("ALTER TABLE vs_rooms ADD COLUMN banned_words TEXT;")
+        print("[DB] Migration: vs_rooms.banned_words eklendi.")
 
 
 def get_daily_puzzle(today: date) -> dict | None:
@@ -313,28 +317,29 @@ def add_custom_link(word_a: str, word_b: str):
 
 # --- VS Mode DB Functions ---
 
-def db_create_vs_room(room_code: str, word_a: str, word_b: str):
+def db_create_vs_room(room_code: str, word_a: str, word_b: str, banned_words: str | None = None):
     import json
     with get_cursor() as cur:
         cur.execute(
             """
-            INSERT INTO vs_rooms (room_code, word_a, word_b, status, players, last_activity)
-            VALUES (%s, %s, %s, 'waiting', %s, CURRENT_TIMESTAMP)
+            INSERT INTO vs_rooms (room_code, word_a, word_b, status, players, banned_words, last_activity)
+            VALUES (%s, %s, %s, 'waiting', %s, %s, CURRENT_TIMESTAMP)
             ON CONFLICT (room_code) DO UPDATE SET
                 word_a = EXCLUDED.word_a,
                 word_b = EXCLUDED.word_b,
                 status = 'waiting',
                 winner_info = NULL,
+                banned_words = EXCLUDED.banned_words,
                 last_activity = CURRENT_TIMESTAMP
             """,
-            (room_code, word_a, word_b, json.dumps([])),
+            (room_code, word_a, word_b, json.dumps([]), banned_words),
         )
 
 def db_get_vs_room(room_code: str) -> dict | None:
     import json
     with get_cursor() as cur:
         cur.execute(
-            "SELECT room_code, word_a, word_b, status, winner_info, players FROM vs_rooms WHERE room_code = %s",
+            "SELECT room_code, word_a, word_b, status, winner_info, players, banned_words FROM vs_rooms WHERE room_code = %s",
             (room_code,),
         )
         row = cur.fetchone()
@@ -345,7 +350,7 @@ def db_get_vs_room(room_code: str) -> dict | None:
             return d
         return None
 
-def db_update_vs_room_status(room_code: str, status: str, winner_info: dict | None = None, word_a: str | None = None, word_b: str | None = None):
+def db_update_vs_room_status(room_code: str, status: str, winner_info: dict | None = None, word_a: str | None = None, word_b: str | None = None, banned_words: str | None = None, update_banned_words: bool = False):
     import json
     with get_cursor() as cur:
         updates = ["status = %s", "last_activity = CURRENT_TIMESTAMP"]
@@ -359,6 +364,12 @@ def db_update_vs_room_status(room_code: str, status: str, winner_info: dict | No
         if word_b is not None:
             updates.append("word_b = %s")
             params.append(word_b)
+        if update_banned_words:
+            updates.append("banned_words = %s")
+            params.append(banned_words)
+        elif banned_words is not None:
+            updates.append("banned_words = %s")
+            params.append(banned_words)
         
         params.append(room_code)
         query = f"UPDATE vs_rooms SET {', '.join(updates)} WHERE room_code = %s"

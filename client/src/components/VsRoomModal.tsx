@@ -5,6 +5,7 @@ interface VsRoomModalProps {
   roomCode: string;
   wordA: string | null;
   wordB: string | null;
+  bannedWords: string | null;
   players: string[];
   isHost: boolean;
   status: 'waiting' | 'finished';
@@ -13,7 +14,7 @@ interface VsRoomModalProps {
   isLoading: boolean;
 }
 
-export default function VsRoomModal({ roomCode, wordA, wordB, players, isHost, status, onStartGame, onLeave, isLoading }: VsRoomModalProps) {
+export default function VsRoomModal({ roomCode, wordA, wordB, bannedWords, players, isHost, status, onStartGame, onLeave, isLoading }: VsRoomModalProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -59,6 +60,26 @@ export default function VsRoomModal({ roomCode, wordA, wordB, players, isHost, s
             <p style={{ fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
               {wordA && wordB ? `${wordA} ⟷ ${wordB}` : 'Rastgele Kelimeler'}
             </p>
+            {bannedWords && (
+              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed var(--color-border)' }}>
+                <p style={{ fontSize: '11px', color: '#dc2626', fontWeight: 600, marginBottom: '4px' }}>Yasaklı Kelimeler:</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center' }}>
+                  {bannedWords.split(/\s+/).filter(Boolean).map((word, i) => (
+                    <span key={i} style={{ 
+                      background: 'rgba(220, 38, 38, 0.1)', 
+                      color: '#ef4444', 
+                      padding: '2px 6px', 
+                      borderRadius: '8px', 
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      border: '1px solid rgba(220, 38, 38, 0.2)'
+                    }}>
+                      {word}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '8px' }}>

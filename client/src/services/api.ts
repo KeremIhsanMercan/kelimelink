@@ -103,3 +103,14 @@ export async function submitCustomLinkReport(wordA: string, wordB: string, reaso
     username: username || 'Anonim',
   });
 }
+
+export async function fetchHintWord(wordA: string, wordB: string, username: string = 'Anonim', isSuperHint: boolean = false): Promise<{ hint_word: string }> {
+  const res = await api.post<{ hint_word: string }>('/api/hint', {
+    word_a: wordA,
+    word_b: wordB,
+    username: username || 'Anonim',
+    is_super_hint: isSuperHint
+  });
+  return res.data;
+}
+

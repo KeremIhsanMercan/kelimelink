@@ -14,6 +14,7 @@ export interface VsRoomState {
   status: 'disconnected' | 'waiting' | 'playing' | 'finished';
   wordA: string | null;
   wordB: string | null;
+  bannedWords: string | null;
   players: string[];
   winnerInfo: WinnerInfo | null;
   error: string | null;
@@ -26,6 +27,7 @@ export function useVsMode(username: string) {
     status: 'disconnected',
     wordA: null,
     wordB: null,
+    bannedWords: null,
     players: [],
     winnerInfo: null,
     error: null,
@@ -60,6 +62,7 @@ export function useVsMode(username: string) {
             status: data.status,
             wordA: data.word_a,
             wordB: data.word_b,
+            bannedWords: data.banned_words,
             players: data.players,
             winnerInfo: data.winner_info,
             error: null,
@@ -103,14 +106,14 @@ export function useVsMode(username: string) {
     });
   }, [username]);
 
-  const createRoom = useCallback(async (wordA?: string, wordB?: string) => {
+  const createRoom = useCallback(async (wordA?: string, wordB?: string, bannedWords?: string) => {
     setState(s => ({ ...s, isLoading: true, error: null }));
     try {
       const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
       const res = await fetch(`${API_BASE}/api/vs/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word_a: wordA || null, word_b: wordB || null })
+        body: JSON.stringify({ word_a: wordA || null, word_b: wordB || null, banned_words: bannedWords || null })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -144,6 +147,7 @@ export function useVsMode(username: string) {
       status: 'disconnected',
       wordA: null,
       wordB: null,
+      bannedWords: null,
       players: [],
       winnerInfo: null,
       error: null,
@@ -170,13 +174,14 @@ export function useVsMode(username: string) {
     }
   }, [state.status]);
 
-  const restartGame = useCallback((wordA?: string, wordB?: string) => {
+  const restartGame = useCallback((wordA?: string, wordB?: string, bannedWords?: string) => {
     if (wsRef.current) {
       setState(s => ({ ...s, isLoading: true, error: null }));
       wsRef.current.send(JSON.stringify({
         type: 'restart_game',
         word_a: wordA || null,
-        word_b: wordB || null
+        word_b: wordB || null,
+        banned_words: bannedWords || null
       }));
     }
   }, []);

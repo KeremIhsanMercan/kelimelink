@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react';
 import type { SimilarityResult } from '../services/api';
-import { submitCustomLinkReport } from '../services/api';
+import { submitCustomLinkReport, fetchHintWord } from '../services/api';
 
 import type { GameMode, GraphNode } from '../hooks/useGameState';
 import { Trophy, HelpCircle, Plus } from 'lucide-react';
@@ -20,6 +20,7 @@ interface SidebarProps {
   onAddWord: (word: string) => void;
   onSelectNode: (word: string) => void;
   gameMode: GameMode;
+  bannedWords?: string | null;
   nextPuzzleAt: string | null;
   serverOffset: number;
   onTimerEnd?: () => void;
@@ -46,6 +47,7 @@ export default function Sidebar({
   onAddWord,
   onSelectNode,
   gameMode,
+  bannedWords,
   nextPuzzleAt,
   serverOffset,
   onTimerEnd,
@@ -71,6 +73,53 @@ export default function Sidebar({
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportSuccess, setReportSuccess] = useState(false);
   const [reportModalClosing, setReportModalClosing] = useState(false);
+
+  const [hintCount, setHintCount] = useState(0);
+  const [isFetchingHint, setIsFetchingHint] = useState(false);
+
+  useEffect(() => {
+    setHintCount(0);
+  }, [wordA, wordB]);
+
+  useEffect(() => {
+    if (localWarning) {
+      const timer = setTimeout(() => {
+        setLocalWarning(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [localWarning]);
+
+  const handleHintClick = async () => {
+    if (isFetchingHint || isSolved || gameMode !== 'practice') return;
+
+    const isSuperHint = hintCount >= 5;
+    const guessedNodes = nodes.filter(n => n.type === 'guessed');
+    let targetWordA = wordA;
+    let targetWordB = wordB;
+    
+    for (let i = guessedNodes.length - 1; i >= 0; i--) {
+      const n = guessedNodes[i];
+      if (n.chainSide === 'a' || n.chainSide === 'b') {
+        targetWordA = n.word;
+        targetWordB = n.chainSide === 'a' ? wordB : wordA;
+        break;
+      }
+    }
+
+    setIsFetchingHint(true);
+    try {
+      const res = await fetchHintWord(targetWordA, targetWordB, username, isSuperHint);
+      setInputValue(res.hint_word);
+      setLocalWarning(null);
+      setHintCount(prev => prev + 1);
+      if (inputRef.current) inputRef.current.focus();
+    } catch (err: any) {
+      setLocalWarning(err.response?.data?.detail || 'İpucu alınamadı.');
+    } finally {
+      setIsFetchingHint(false);
+    }
+  };
 
 
   useEffect(() => {
@@ -207,7 +256,7 @@ export default function Sidebar({
     <aside className="sidebar">
       {/* Başlangıç Kelimeleri */}
       <div className="sidebar__section">
-        <div className="sidebar__label">{gameMode === 'practice' ? 'Pratik Bulmaca' : 'Günlük Bulmaca'}</div>
+        <div className="sidebar__label">{gameMode === 'practice' ? 'Pratik Bulmaca' : gameMode === 'vs' ? 'VS Bulmaca' : 'Günlük Bulmaca'}</div>
         <div className="starting-words">
           <span className="starting-word starting-word--a">{wordA}</span>
           <span className="starting-words__arrow">⟷</span>
@@ -218,11 +267,43 @@ export default function Sidebar({
             Sonraki bulmacaya: {timeLeft}
           </p>
         )}
+        {bannedWords && (
+          <div style={{ marginTop: '12px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)', display: 'block', marginBottom: '4px' }}>Yasaklı Kelimeler:</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              {bannedWords.split(/\s+/).filter(Boolean).map((word, i) => (
+                <span key={i} style={{
+                  background: 'rgba(220, 38, 38, 0.1)',
+                  color: '#ef4444',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  border: '1px solid rgba(220, 38, 38, 0.2)'
+                }}>
+                  {word}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Kelime Ekleme */}
       <div className="sidebar__section">
-        <div className="sidebar__label">Kelime Ekle</div>
+        <div className="sidebar__label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Kelime Ekle</span>
+          {gameMode === 'practice' && (
+            <button 
+              className="hint-btn" 
+              onClick={handleHintClick}
+              disabled={isFetchingHint || isSolved || guessCount === 0}
+              title="İpucu Al"
+            >
+              {isFetchingHint ? '...' : 'İpucu'}
+            </button>
+          )}
+        </div>
         <form className="guess-form" onSubmit={handleSubmit}>
           <input
             ref={inputRef}

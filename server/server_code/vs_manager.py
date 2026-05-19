@@ -24,10 +24,11 @@ class Player:
         self.username = username
 
 class Room:
-    def __init__(self, room_code: str, word_a: str, word_b: str):
+    def __init__(self, room_code: str, word_a: str, word_b: str, banned_words: str | None = None):
         self.room_code = room_code
         self.word_a = word_a
         self.word_b = word_b
+        self.banned_words = banned_words
         self.players: List[Player] = [] # Local connections
         self.all_players: List[str] = [] # Global list from DB
         self.status = "waiting" # waiting, playing, finished
@@ -55,6 +56,7 @@ class Room:
             "status": self.status,
             "word_a": self.word_a,
             "word_b": self.word_b,
+            "banned_words": self.banned_words,
             "players": self.all_players if self.all_players else [p.username for p in self.players],
             "winner_info": self.winner_info
         }
@@ -64,6 +66,7 @@ rooms: Dict[str, Room] = {}
 class CreateRoomReq(BaseModel):
     word_a: Optional[str] = None
     word_b: Optional[str] = None
+    banned_words: Optional[str] = None
 
 def generate_room_code():
     # Increase space to avoid collisions and potential loops
@@ -107,6 +110,7 @@ async def handle_db_notification(room_code: str):
         room = rooms[room_code]
         room.word_a = db_room["word_a"]
         room.word_b = db_room["word_b"]
+        room.banned_words = db_room.get("banned_words")
         room.status = db_room["status"]
         room.winner_info = db_room["winner_info"]
         room.all_players = db_room.get("players", [])
@@ -185,7 +189,7 @@ async def stop_listening_task():
 
 @router.post("/api/vs/create")
 async def create_vs_room(req: CreateRoomReq, request: Request):
-    word_a, word_b = req.word_a, req.word_b
+    word_a, word_b, banned_words = req.word_a, req.word_b, req.banned_words
     word_vectors = request.app.state.word_vectors
     custom_links_dict = request.app.state.custom_links_dict
 
@@ -200,18 +204,18 @@ async def create_vs_room(req: CreateRoomReq, request: Request):
         if not word_b: word_b = wb
             
     room_code = generate_room_code()
-    rooms[room_code] = Room(room_code, word_a.strip().lower(), word_b.strip().lower())
+    rooms[room_code] = Room(room_code, word_a.strip().lower(), word_b.strip().lower(), banned_words)
     
     # Save to DB for other workers and cleanup old rooms to avoid background loop
     try:
         db_cleanup_vs_rooms(hours=1)
         wa_norm = unicodedata.normalize('NFC', word_a.strip().lower())
         wb_norm = unicodedata.normalize('NFC', word_b.strip().lower())
-        db_create_vs_room(room_code, wa_norm, wb_norm) 
+        db_create_vs_room(room_code, wa_norm, wb_norm, banned_words) 
     except Exception as e:
         logger.error(f"[VS] DB Oda oluşturma hatası: {e}")
     
-    return {"room_code": room_code, "word_a": word_a, "word_b": word_b}
+    return {"room_code": room_code, "word_a": word_a, "word_b": word_b, "banned_words": banned_words}
 
 @router.websocket("/api/ws/vs/{room_code}")
 async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "Anonim"):
@@ -221,7 +225,7 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
         # Check DB if room exists on another worker
         db_room = db_get_vs_room(room_code)
         if db_room:
-            rooms[room_code] = Room(room_code, db_room["word_a"], db_room["word_b"])
+            rooms[room_code] = Room(room_code, db_room["word_a"], db_room["word_b"], db_room.get("banned_words"))
             rooms[room_code].status = db_room["status"]
             rooms[room_code].winner_info = db_room["winner_info"]
             rooms[room_code].all_players = db_room.get("players", [])
@@ -300,6 +304,7 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
                 is_host = room.all_players and room.all_players[0] == username
                 if is_host:
                     word_a, word_b = data.get("word_a"), data.get("word_b")
+                    banned_words = data.get("banned_words")
                     word_vectors = websocket.app.state.word_vectors
                     custom_links_dict = websocket.app.state.custom_links_dict
                     
@@ -318,9 +323,10 @@ async def vs_websocket(websocket: WebSocket, room_code: str, username: str = "An
                     wa_norm = unicodedata.normalize('NFC', word_a.strip().lower())
                     wb_norm = unicodedata.normalize('NFC', word_b.strip().lower())
                     room.word_a, room.word_b = wa_norm, wb_norm
+                    room.banned_words = banned_words
                     
                     # Update DB and notify others
-                    db_update_vs_room_status(room_code, "waiting", word_a=room.word_a, word_b=room.word_b)
+                    db_update_vs_room_status(room_code, "waiting", word_a=room.word_a, word_b=room.word_b, banned_words=room.banned_words, update_banned_words=True)
                     db_notify_room_update(room_code)
                     
                     await room.broadcast(room.get_state_message())

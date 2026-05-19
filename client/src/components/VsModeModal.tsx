@@ -3,7 +3,7 @@ import { X, Users, Clipboard } from 'lucide-react';
 
 interface VsModeModalProps {
   onClose: () => void;
-  onCreateRoom: (wordA: string, wordB: string) => Promise<void>;
+  onCreateRoom: (wordA: string, wordB: string, bannedWords: string) => Promise<void>;
   onJoinRoom: (code: string) => void;
   vsError: string | null;
   onClearVsError: () => void;
@@ -15,13 +15,14 @@ export default function VsModeModal({ onClose, onCreateRoom, onJoinRoom, vsError
 
   const [wordA, setWordA] = useState('');
   const [wordB, setWordB] = useState('');
+  const [bannedWords, setBannedWords] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
 
   const handleCreate = async () => {
     setCreateError(null);
     try {
-      await onCreateRoom(wordA, wordB);
+      await onCreateRoom(wordA, wordB, bannedWords);
     } catch (err: any) {
       setCreateError(err.message);
     }
@@ -99,6 +100,16 @@ export default function VsModeModal({ onClose, onCreateRoom, onJoinRoom, vsError
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-primary)', outline: 'none', fontFamily: 'inherit' }}
                 />
               </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#dc2626', marginBottom: '4px' }}>Yasaklı Kelimeler</label>
+                <input
+                  type="text"
+                  value={bannedWords}
+                  onChange={(e) => setBannedWords(e.target.value)}
+                  placeholder="Boşluk bırakarak yazınız..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: '#dc2626', outline: 'none', fontFamily: 'inherit' }}
+                />
+              </div>
               {createError && <div style={{ color: '#dc2626', fontSize: '13px', textAlign: 'center' }}>{createError}</div>}
               <button
                 onClick={handleCreate}
@@ -117,33 +128,33 @@ export default function VsModeModal({ onClose, onCreateRoom, onJoinRoom, vsError
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '4px' }}>Oda Kodu</label>
                 <div style={{ position: 'relative', background: 'var(--color-bg)', borderRadius: '8px' }}>
-                    <input
-                      type="text"
-                      value={joinCode}
-                      onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); onClearVsError(); }}
-                      maxLength={6}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      style={{ 
-                        width: '100%', 
-                        padding: '10px var(--vs-code-padding, 44px)', 
-                        borderRadius: '8px', 
-                        border: `1px solid ${vsError ? '#dc2626' : 'var(--color-border)'}`, 
-                        outline: 'none', 
-                        fontFamily: 'monospace', 
-                        letterSpacing: 'min(1.5vw, 8px)', 
-                        textAlign: 'center', 
-                        fontSize: 'max(14px, 20px)', 
-                        fontWeight: 'bold',
-                        boxSizing: 'border-box',
-                        color: 'transparent',
-                        caretColor: '#3b82f6',
-                        background: 'transparent',
-                        position: 'relative',
-                        zIndex: 1,
-                      } as React.CSSProperties}
-                    />
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); onClearVsError(); }}
+                    maxLength={6}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    style={{
+                      width: '100%',
+                      padding: '10px var(--vs-code-padding, 44px)',
+                      borderRadius: '8px',
+                      border: `1px solid ${vsError ? '#dc2626' : 'var(--color-border)'}`,
+                      outline: 'none',
+                      fontFamily: 'monospace',
+                      letterSpacing: 'min(1.5vw, 8px)',
+                      textAlign: 'center',
+                      fontSize: 'max(14px, 20px)',
+                      fontWeight: 'bold',
+                      boxSizing: 'border-box',
+                      color: 'transparent',
+                      caretColor: '#3b82f6',
+                      background: 'transparent',
+                      position: 'relative',
+                      zIndex: 1,
+                    } as React.CSSProperties}
+                  />
                   {/* Visual mask overlay */}
                   <div style={{
                     position: 'absolute',
@@ -176,9 +187,9 @@ export default function VsModeModal({ onClose, onCreateRoom, onJoinRoom, vsError
                 onClick={() => { onClearVsError(); onJoinRoom(joinCode); }}
                 disabled={joinCode.length !== 6 || isLoading}
                 className="vs-btn vs-btn--success"
-                style={{ 
-                    marginTop: '4px',
-                    background: joinCode.length === 6 ? undefined : '#9ca3af' // Keep grey if not 6 chars
+                style={{
+                  marginTop: '4px',
+                  background: joinCode.length === 6 ? undefined : '#9ca3af' // Keep grey if not 6 chars
                 }}
               >
                 {isLoading ? <div className="loading-spinner loading-spinner--small" /> : 'Odaya Katıl'}

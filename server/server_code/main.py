@@ -28,6 +28,7 @@ from nlp_engine import (
     pick_daily_pair,
     pick_practice_pair,
     batch_similarities,
+    find_hint_word,
 )
 from database import (
     init_tables, get_daily_puzzle, save_daily_puzzle, 
@@ -89,6 +90,7 @@ async def lifespan(app: FastAPI):
     app.state.word_vectors = load_vectors(CSV_PATH)
     app.state.normalized_vectors = build_normalized_vectors(app.state.word_vectors)
     app.state.guess_cache = OrderedDict()
+    app.state.guess_counts = {}
     logger.info(f"[Sunucu] {len(app.state.word_vectors)} kelime vektörü bellekte hazır.")
     yield
     logger.info("[Sunucu] Kapatılıyor...")
@@ -129,6 +131,12 @@ class RebuildRequest(BaseModel):
     word_a: str
     word_b: str
     guessed_words: list[str]
+
+class HintRequest(BaseModel):
+    word_a: str
+    word_b: str
+    username: str = Field(default="", max_length=20)
+    is_super_hint: bool = False
 
 class CustomLinkReport(BaseModel):
     word_a: str
@@ -224,6 +232,29 @@ async def daily_puzzle(request: Request):
     }
 
 
+@app.get("/api/archive")
+async def archive_puzzles(limit: int = 30):
+    from database import get_cursor
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).date()
+    
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            SELECT d.puzzle_date, d.word_a, d.word_b, g.min_guesses_path
+            FROM daily_puzzles d
+            LEFT JOIN global_stats g ON d.puzzle_date = g.puzzle_date AND g.gamemode = 'daily'
+            WHERE d.puzzle_date < %s
+            ORDER BY d.puzzle_date DESC
+            LIMIT %s
+            """,
+            (today, limit)
+        )
+        rows = cur.fetchall()
+        
+    return [{"date": str(r["puzzle_date"]), "word_a": r["word_a"], "word_b": r["word_b"], "path": r["min_guesses_path"]} for r in rows]
+
+
 @app.get("/api/practice-puzzle")
 async def practice_puzzle(request: Request):
     word_vectors = request.app.state.word_vectors
@@ -247,6 +278,11 @@ async def guess(req: GuessRequest, request: Request):
     client_host = request.client.host if request.client else "unknown"
     display_name = req.username.strip() if req.username and req.username.strip() else "Anonim"
     logger.info(f"{client_host} - \"POST /api/guess {display_name} {word} HTTP/1.1\" 200 OK")
+
+    # Update guess counts
+    counts = getattr(request.app.state, "guess_counts", {})
+    counts[word] = counts.get(word, 0) + 1
+    request.app.state.guess_counts = counts
 
     return get_cached_similarity_response(request, word, board_words)
 
@@ -301,6 +337,30 @@ async def rebuild_board(req: RebuildRequest, request: Request):
     return batch_similarities(all_words, word_vectors, custom_links_dict)
 
 
+@app.post("/api/hint")
+async def get_hint(req: HintRequest, request: Request):
+    word_a = normalize_word(req.word_a)
+    word_b = normalize_word(req.word_b)
+    
+    hint_word = find_hint_word(
+        word_a, 
+        word_b, 
+        request.app.state.normalized_vectors, 
+        request.app.state.custom_links_dict,
+        req.is_super_hint
+    )
+    
+    if not hint_word:
+        raise HTTPException(status_code=404, detail="Uygun ipucu kelimesi bulunamadı.")
+        
+    client_host = request.client.host if request.client else "unknown"
+    display_name = req.username.strip() if req.username and req.username.strip() else "Anonim"
+    logger.info(f"{client_host} - \"POST /api/hint {display_name} {hint_word} HTTP/1.1\" 200 OK")
+    
+    return {"hint_word": hint_word}
+
+
+
 @app.get("/api/check-word/{word}")
 async def check_word(request: Request, word: str = Path(..., max_length=100)):
     word_vectors = request.app.state.word_vectors
@@ -347,6 +407,21 @@ async def api_reload_custom_links(request: Request):
     except Exception as e:
         logger.error(f"[Sunucu] Admin reload hatası: {e}")
         raise HTTPException(status_code=500, detail="Bağlantılar yenilenemedi.")
+
+
+@app.get("/api/admin/guess-stats", dependencies=[Depends(verify_admin)])
+async def api_guess_stats(request: Request):
+    counts = getattr(request.app.state, "guess_counts", {})
+    if not counts:
+        return {}
+        
+    filtered_counts = {w: c for w, c in counts.items() if c > 100}
+    
+    if not filtered_counts:
+        max_word = max(counts, key=counts.get)
+        filtered_counts = {max_word: counts[max_word]}
+        
+    return filtered_counts
 
 
 # ---------------------------------------------------------------------------

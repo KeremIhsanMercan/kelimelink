@@ -4,11 +4,22 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import './index.css'
 import App from './App'
+import Archive from './components/Archive'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-    <Analytics />
-    <SpeedInsights />
-  </StrictMode>,
-)
+const root = document.getElementById('root')!;
+
+if (window.location.pathname === '/archive') {
+  createRoot(root).render(
+    <StrictMode>
+      <Archive />
+    </StrictMode>
+  );
+} else {
+  createRoot(root).render(
+    <StrictMode>
+      <App />
+      <Analytics />
+      <SpeedInsights />
+    </StrictMode>
+  );
+}

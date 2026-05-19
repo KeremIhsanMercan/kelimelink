@@ -251,3 +251,62 @@ def batch_similarities(
         "links": links,
         "similarities": sim_map
     }
+
+
+def find_hint_word(
+    word_a: str,
+    word_b: str,
+    normalized_vectors: dict[str, np.ndarray],
+    custom_links_dict: dict[str, list[str]],
+    is_super_hint: bool = False
+) -> str | None:
+    """
+    Find a hint word that has >30% similarity with word_a 
+    and between 15% and 25% similarity with word_b.
+    If is_super_hint is True, try to find a word >=26% with both.
+    """
+    vec_a = normalized_vectors.get(word_a)
+    vec_b = normalized_vectors.get(word_b)
+
+    if vec_a is None or vec_b is None:
+        return None
+
+    items = list(normalized_vectors.items())
+    if not items:
+        return None
+
+    start_idx = random.randint(0, len(items) - 1)
+    
+    if is_super_hint:
+        for i in range(len(items)):
+            idx = (start_idx + i) % len(items)
+            w, vec = items[idx]
+            
+            if w == word_a or w == word_b:
+                continue
+                
+            sim_a = round(float(np.dot(vec_a, vec)) * 100, 1)
+            if sim_a >= 26.0:
+                sim_b = round(float(np.dot(vec_b, vec)) * 100, 1)
+                if sim_b >= 26.0:
+                    return w
+        
+        # If no word connects them, fallback to normal hint
+        is_super_hint = False
+
+    if not is_super_hint:
+        for i in range(len(items)):
+            idx = (start_idx + i) % len(items)
+            w, vec = items[idx]
+            
+            if w == word_a or w == word_b:
+                continue
+                
+            sim_a = round(float(np.dot(vec_a, vec)) * 100, 1)
+            if sim_a > 30.0:
+                sim_b = round(float(np.dot(vec_b, vec)) * 100, 1)
+                if 15.0 <= sim_b <= 25.0:
+                    return w
+                
+    return None
+
