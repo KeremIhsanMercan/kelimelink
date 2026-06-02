@@ -9,11 +9,20 @@ import { useEffect } from 'react';
 export function useRenderReady(isReady: boolean = true) {
   useEffect(() => {
     if (isReady) {
-      requestAnimationFrame(() => {
+      let fired = false;
+      const fire = () => {
+        if (fired) return;
+        fired = true;
         setTimeout(() => {
           document.dispatchEvent(new Event('render-ready'));
         }, 100);
-      });
+      };
+
+      if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+        window.requestAnimationFrame(fire);
+      }
+      // Guarantee it fires even if requestAnimationFrame is stuck (e.g. in JSDOM)
+      setTimeout(fire, 500);
     }
   }, [isReady]);
 }

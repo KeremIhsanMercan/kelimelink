@@ -33,12 +33,22 @@ export default function AdUnit({
 }: AdUnitProps) {
   useEffect(() => {
     if (!ADSENSE_APPROVED) return;
+
+    // Dinamik olarak script'i yükle
+    if (publisherId && !document.querySelector('script[src*="adsbygoogle.js"]')) {
+      const script = document.createElement('script');
+      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}`;
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      document.head.appendChild(script);
+    }
+
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch (err) {
       console.error('AdSense error:', err);
     }
-  }, [slotId]);
+  }, [slotId, publisherId]);
 
   // Don't render anything until approval is granted
   if (!ADSENSE_APPROVED) return null;

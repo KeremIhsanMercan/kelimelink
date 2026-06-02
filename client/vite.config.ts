@@ -17,9 +17,9 @@ export default defineConfig({
         '/gizlilik-politikasi',
         '/kullanim-kosullari'
       ],
-      renderer: '@prerenderer/renderer-puppeteer',
+      renderer: '@prerenderer/renderer-jsdom',
       rendererOptions: {
-        renderAfterDocumentEvent: 'render-ready',
+        renderAfterTime: 2000,
       },
       postProcess(renderedRoute) {
         // Replace localhost references with production URL in pre-rendered HTML
