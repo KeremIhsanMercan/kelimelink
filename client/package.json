@@ -17,10 +17,13 @@
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-force-graph-2d": "^1.28.0"
+    "react-force-graph-2d": "^1.28.0",
+    "react-router-dom": "^7.16.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@prerenderer/renderer-puppeteer": "^1.2.4",
+    "@prerenderer/rollup-plugin": "^0.3.12",
     "@types/d3-force": "^3.0.10",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",

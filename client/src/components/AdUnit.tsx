@@ -1,5 +1,13 @@
 import { useEffect } from 'react';
 
+/**
+ * AdSense approval guard.
+ * Set this to `true` only AFTER Google AdSense has approved the site.
+ * While `false`, no ad scripts will load and no ad containers will render,
+ * preventing "ads on screens without publisher content" violations.
+ */
+const ADSENSE_APPROVED = false;
+
 interface AdUnitProps {
   publisherId?: string;
   slotId: string;
@@ -24,12 +32,16 @@ export default function AdUnit({
   style = {},
 }: AdUnitProps) {
   useEffect(() => {
+    if (!ADSENSE_APPROVED) return;
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch (err) {
       console.error('AdSense error:', err);
     }
   }, [slotId]);
+
+  // Don't render anything until approval is granted
+  if (!ADSENSE_APPROVED) return null;
 
   return (
     <div className={`ad-container ${className}`} style={{ minHeight: '100px', ...style }}>

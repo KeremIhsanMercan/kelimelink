@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users, ArrowUp } from 'lucide-react';
+import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useVsMode } from './hooks/useVsMode';
+import { useHydration } from './hooks/useHydration';
+import { useRenderReady } from './hooks/useRenderReady';
 import GraphCanvas from './components/GraphCanvas';
 import Sidebar from './components/Sidebar';
 import WinBanner from './components/WinBanner';
 import ProfileModal from './components/ProfileModal';
 import InfoModal from './components/InfoModal';
 import UsernameBadge from './components/UsernameBadge';
-import AdUnit from './components/AdUnit';
+// AdUnit import removed — ads disabled until AdSense approval is granted
 import VsModeModal from './components/VsModeModal';
 import VsRoomModal from './components/VsRoomModal';
 import VsGameOverModal from './components/VsGameOverModal';
@@ -63,6 +65,8 @@ export default function App() {
   const [showVsRematchModal, setShowVsRematchModal] = useState(false);
   const [hasSeenGameOver, setHasSeenGameOver] = useState(false);
 
+  const isHydrated = useHydration();
+  useRenderReady(); // App shell is ready instantly for the prerenderer!
 
   const { isDark, toggleDarkMode } = useDarkMode();
   const [showProfile, setShowProfile] = useState(false);
@@ -154,11 +158,37 @@ export default function App() {
     }
   };
 
-  if (isLoading) {
+  if (!isHydrated || isLoading) {
     return (
-      <div className="loading-screen">
-        <div className="loading-spinner" />
-        <p className="loading-text">Bulmaca yükleniyor...</p>
+      <div className="app-layout">
+        <header className="app-header">
+          <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
+          <h1 className="app-header__title">KelimeLink</h1>
+          <span className="app-header__subtitle">Kelime Bağlantı Bulmacası</span>
+        </header>
+        <main className="app-main" style={{ justifyContent: 'center', alignItems: 'center' }}>
+          <div className="loading-screen" style={{ height: 'auto' }}>
+            <div className="loading-spinner" />
+            <p className="loading-text">Yükleniyor...</p>
+          </div>
+        </main>
+        <footer className="app-footer">
+          <div className="app-footer__content">
+            <div className="app-footer__copyright">
+              © 2026 KelimeLink. Tüm hakları saklıdır.
+            </div>
+            <div className="app-footer__links">
+              <a href="/nasil-oynanir">Nasıl Oynanır?</a>
+              <a href="/hakkinda">Hakkında</a>
+              <a href="/arsiv">Bulmaca Arşivi</a>
+              <a href="/blog/konseptnet-nasil-calisir">ConceptNet Nasıl Çalışır?</a>
+              <a href="/blog/kelime-oyunlarinda-nlp">Kelime Oyunlarında NLP</a>
+              <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
+              <a href="/kullanim-kosullari">Kullanım Şartları</a>
+              <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
+            </div>
+          </div>
+        </footer>
       </div>
     );
   }
@@ -396,52 +426,7 @@ export default function App() {
 
       <CookieBanner />
 
-      {/* SEO & Content Section for AdSense */}
-      <section className="seo-content-section">
-        <div className="seo-content-container">
-          <h2>KelimeLink: Türkçe Kelime Bağlantı Bulmacası</h2>
 
-          <p>
-            KelimeLink, zekanızı ve kelime dağarcığınızı test eden bir Türkçe kelime oyunudur.
-            Oyunun temel amacı, size verilen iki uzak kelime (örneğin "Güneş" ve "Kitap") arasında
-            anlamsal bağlantılar kurarak bir yol oluşturmaktır. Her yeni kelime eklediğinizde,
-            sistemimiz bu kelimenin mevcut kelimelerle olan anlamsal benzerliğini hesaplar.
-            Eğer benzerlik belirli bir eşiğin üzerindeyse, kelimeler arasında bir bağ oluşur.
-          </p>
-          <p>
-            Bu oyun, yapay zeka ve doğal dil işleme (NLP) algoritmalarını kullanarak kelimeler arasındaki
-            anlamsal ilişkileri tespit eder. Günlük bulmacada her gün yeni bir çift kelime sunulurken,
-            Pratik modunda sınırsız sayıda deneme yapabilir ve kendinizi geliştirebilirsiniz.
-            Ayrıca arkadaşlarınızla VS modunda gerçek zamanlı olarak yarışabilirsiniz.
-          </p>
-
-          <div style={{ margin: '20px 0', display: 'flex', justifyContent: 'center' }}>
-            <AdUnit
-              slotId="5519199413"
-              format="horizontal"
-              responsive={true}
-              style={{ width: '100%', minHeight: '90px' }}
-            />
-          </div>
-
-          <h3>Nasıl Oynanır?</h3>
-          <ul>
-            <li>Başlangıç ve hedef kelimeyi inceleyin.</li>
-            <li>İki kelimeyi birbirine bağlayacağını düşündüğünüz yeni kelimeler girin.</li>
-            <li>Kelimeler arasında %26 ve üzeri benzerlik olduğunda bağlantı kurulur.</li>
-            <li>Hedef kelimeye en az sayıda hamleyle ulaşmaya çalışın.</li>
-          </ul>
-        </div>
-        <button
-          className="back-to-top-btn"
-          onClick={() => {
-            const layout = document.querySelector('.app-layout');
-            if (layout) layout.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-        >
-          <ArrowUp size={18} /> Yukarı Dön
-        </button>
-      </section>
 
 
       <footer className="app-footer">
@@ -450,9 +435,13 @@ export default function App() {
             © 2026 KelimeLink. Tüm hakları saklıdır.
           </div>
           <div className="app-footer__links">
-            <a href="/archive">Bulmaca Arşivi</a>
-            <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Gizlilik Politikası</a>
-            <a href="/terms.html" target="_blank" rel="noopener noreferrer">Kullanım Şartları</a>
+            <a href="/nasil-oynanir">Nasıl Oynanır?</a>
+            <a href="/hakkinda">Hakkında</a>
+            <a href="/arsiv">Bulmaca Arşivi</a>
+            <a href="/blog/konseptnet-nasil-calisir">ConceptNet Nasıl Çalışır?</a>
+            <a href="/blog/kelime-oyunlarinda-nlp">Kelime Oyunlarında NLP</a>
+            <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
+            <a href="/kullanim-kosullari">Kullanım Şartları</a>
             <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
           </div>
         </div>

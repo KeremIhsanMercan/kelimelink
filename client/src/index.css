@@ -128,8 +128,9 @@ body {
     background: var(--color-surface);
     padding: 0 20px;
     flex-shrink: 0;
-    position: relative;
-    z-index: 10;
+    position: sticky;
+    top: 0;
+    z-index: 50;
 }
 
 .app-header__logo {
@@ -2069,48 +2070,102 @@ html.dark {
 }
 
 /* ============================================
-   SEO Content & Footer
+   Content Pages (Blog, About, How-to-play)
    ============================================ */
 
-.seo-content-section {
+.content-page {
+    flex: 1;
+    background-color: var(--color-bg);
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.content-page__article {
+    max-width: 720px;
+    width: 100%;
     background-color: var(--color-surface);
-    padding: 20px 20px;
-    border-top: 1px solid var(--color-border);
+    padding: 48px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
 }
 
-.seo-content-container {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.seo-content-container h2 {
-    font-size: 1.8rem;
+.content-page__article h1 {
+    font-size: 2.2rem;
+    color: var(--color-text-primary);
     margin-bottom: 24px;
-    color: var(--color-text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
 }
 
-.seo-content-container h3 {
-    font-size: 1.3rem;
+.content-page__article h2 {
+    font-size: 1.5rem;
+    color: var(--color-text-primary);
+    margin: 40px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.content-page__article h3 {
+    font-size: 1.2rem;
+    color: var(--color-text-primary);
     margin: 32px 0 16px;
+}
+
+.content-page__article p {
+    font-size: 1.05rem;
+    color: var(--color-text-secondary);
+    line-height: 1.8;
+    margin-bottom: 24px;
+}
+
+.content-page__article ul, 
+.content-page__article ol {
+    margin-bottom: 24px;
+    padding-left: 24px;
+    color: var(--color-text-secondary);
+    font-size: 1.05rem;
+    line-height: 1.8;
+}
+
+.content-page__article li {
+    margin-bottom: 12px;
+}
+
+.content-page__article a {
+    color: var(--color-word-a);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.content-page__article a:hover {
+    text-decoration: underline;
+}
+
+.content-page__article strong {
     color: var(--color-text-primary);
+    font-weight: 600;
 }
 
-.seo-content-container p {
-    font-size: 1rem;
-    color: var(--color-text-secondary);
-    margin-bottom: 20px;
-    line-height: 1.7;
+.content-page__date {
+    font-size: 0.9rem !important;
+    color: var(--color-text-muted) !important;
+    margin-top: -16px;
+    margin-bottom: 32px !important;
+    font-weight: 500;
 }
 
-.seo-content-container ul {
-    margin-bottom: 20px;
-    padding-left: 20px;
-    color: var(--color-text-secondary);
-}
-
-.seo-content-container li {
-    margin-bottom: 10px;
-    line-height: 1.5;
+.content-page__formula {
+    background: var(--color-bg);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    font-family: monospace;
+    font-size: 1.1rem;
+    text-align: center;
+    color: var(--color-word-a);
+    margin-bottom: 24px;
+    border: 1px solid var(--color-border);
 }
 
 .app-footer {
