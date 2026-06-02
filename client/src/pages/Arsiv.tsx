@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Moon, Sun } from 'lucide-react';
 import { useHydration } from '../hooks/useHydration';
 import { useRenderReady } from '../hooks/useRenderReady';
+import { useDarkMode } from '../hooks/useDarkMode';
 import '../index.css';
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -17,6 +18,7 @@ export default function Archive() {
   const [puzzles, setPuzzles] = useState<ArchivePuzzle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
+  const { isDark, toggleDarkMode } = useDarkMode();
   const isHydrated = useHydration();
   useRenderReady();
 
@@ -43,6 +45,16 @@ export default function Archive() {
           <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
           <h1 className="app-header__title">KelimeLink</h1>
           <span className="app-header__subtitle">Arşiv</span>
+          <div className="app-header__actions">
+            <button
+              className="app-header__action-btn"
+              onClick={toggleDarkMode}
+              aria-label="Karanlık Modu Değiştir"
+              title="Karanlık Modu Değiştir"
+            >
+              {isDark ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+          </div>
         </header>
         <main className="archive-main" style={{ alignItems: 'center' }}>
           <div className="loading-screen" style={{ height: 'auto' }}>
@@ -83,9 +95,15 @@ export default function Archive() {
         <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
         <h1 className="app-header__title">KelimeLink</h1>
         <span className="app-header__subtitle">Bulmaca Arşivi</span>
-        <div className="app-header__actions" style={{ visibility: 'hidden' }}>
-          {/* Placeholder for layout balance */}
-          <button className="app-header__action-btn"><ArrowLeft size={20} /></button>
+        <div className="app-header__actions">
+          <button
+            className="app-header__action-btn"
+            onClick={toggleDarkMode}
+            aria-label="Karanlık Modu Değiştir"
+            title="Karanlık Modu Değiştir"
+          >
+            {isDark ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
         </div>
       </header>
 
