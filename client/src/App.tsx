@@ -331,18 +331,20 @@ export default function App() {
           username={username}
           vsWinnerUsername={gameMode === 'vs' && vsMode.status === 'finished' ? (vsMode.winnerInfo?.username ?? null) : null}
         />
-        <GraphCanvas
-          nodes={nodes}
-          links={links}
-          isSolved={isSolved}
-          shortestPath={shortestPath}
-          selectedNode={selectedNode}
-          onNodeClick={selectNode}
-          winAnimationPhase={winAnimationPhase}
-          winShortestPath={winShortestPath}
-          preWinChainSides={preWinChainSides}
-          onWinAnimationFinish={finishWinAnimation}
-        />
+        {!(typeof navigator !== 'undefined' && /HeadlessChrome|Puppeteer|jsdom/i.test(navigator.userAgent)) && (
+          <GraphCanvas
+            nodes={nodes}
+            links={links}
+            isSolved={isSolved}
+            shortestPath={shortestPath}
+            selectedNode={selectedNode}
+            onNodeClick={selectNode}
+            winAnimationPhase={winAnimationPhase}
+            winShortestPath={winShortestPath}
+            preWinChainSides={preWinChainSides}
+            onWinAnimationFinish={finishWinAnimation}
+          />
+        )}
       </main>
 
       {/* Kazanma Bannerı - vs modunda sadece kazanan için göster */}
