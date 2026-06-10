@@ -270,7 +270,7 @@ async def archive_puzzles(limit: int = 30):
     with get_cursor() as cur:
         cur.execute(
             """
-            SELECT d.puzzle_date, d.word_a, d.word_b, g.min_guesses_path
+            SELECT d.puzzle_date, d.word_a, d.word_b, g.min_guesses_path, g.min_guesses_username
             FROM daily_puzzles d
             LEFT JOIN global_stats g ON d.puzzle_date = g.puzzle_date AND g.gamemode = 'daily'
             WHERE d.puzzle_date < %s
@@ -281,7 +281,7 @@ async def archive_puzzles(limit: int = 30):
         )
         rows = cur.fetchall()
         
-    return [{"date": str(r["puzzle_date"]), "word_a": r["word_a"], "word_b": r["word_b"], "path": r["min_guesses_path"]} for r in rows]
+    return [{"date": str(r["puzzle_date"]), "word_a": r["word_a"], "word_b": r["word_b"], "path": r["min_guesses_path"], "player_name": r["min_guesses_username"]} for r in rows]
 
 
 @app.get("/api/practice-puzzle")

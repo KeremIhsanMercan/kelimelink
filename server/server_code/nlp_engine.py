@@ -295,42 +295,49 @@ def find_hint_word(
     if vec_a is None or vec_b is None:
         return None
 
-    items = list(normalized_vectors.items())
-    if not items:
+    keys = list(normalized_vectors.keys())
+    if not keys:
         return None
 
-    start_idx = random.randint(0, len(items) - 1)
+    start_idx = random.randint(0, len(keys) - 1)
     
-    if is_super_hint:
-        for i in range(len(items)):
-            idx = (start_idx + i) % len(items)
-            w, vec = items[idx]
-            
-            if w == word_a or w == word_b:
-                continue
-                
-            sim_a = round(float(np.dot(vec_a, vec)) * 100, 1)
-            if sim_a >= 26.0:
-                sim_b = round(float(np.dot(vec_b, vec)) * 100, 1)
-                if sim_b >= 26.0:
-                    return w
+    normal_hint = None
+    best_fallback = None
+    best_sim_b = -100.0  # using -100.0 to catch even negative similarities safely
+    
+    for i in range(len(keys)):
+        idx = (start_idx + i) % len(keys)
+        w = keys[idx]
         
-        # If no word connects them, fallback to normal hint
-        is_super_hint = False
-
-    if not is_super_hint:
-        for i in range(len(items)):
-            idx = (start_idx + i) % len(items)
-            w, vec = items[idx]
+        if w == word_a or w == word_b:
+            continue
             
-            if w == word_a or w == word_b:
-                continue
+        vec = normalized_vectors[w]
+        
+        # We only care if sim_a >= 26.0 for all conditions, so we can calculate it once
+        sim_a_rounded = round(float(np.dot(vec_a, vec)) * 100, 1)
+        
+        if sim_a_rounded >= 26.0:
+            sim_b_rounded = round(float(np.dot(vec_b, vec)) * 100, 1)
+            
+            # 1. Super Hint (highest priority if requested)
+            if is_super_hint and sim_b_rounded >= 26.0:
+                return w
                 
-            sim_a = round(float(np.dot(vec_a, vec)) * 100, 1)
-            if sim_a > 30.0:
-                sim_b = round(float(np.dot(vec_b, vec)) * 100, 1)
-                if 15.0 <= sim_b <= 25.0:
-                    return w
+            # 2. Normal Hint
+            if normal_hint is None and sim_a_rounded > 30.0 and 15.0 <= sim_b_rounded <= 25.0:
+                normal_hint = w
+                # Return immediately if we are not looking for a super hint
+                if not is_super_hint:
+                    return normal_hint
+                    
+            # 3. Fallback Hint
+            if sim_b_rounded > best_sim_b:
+                best_sim_b = sim_b_rounded
+                best_fallback = w
                 
-    return None
+    if normal_hint is not None:
+        return normal_hint
+        
+    return best_fallback
 

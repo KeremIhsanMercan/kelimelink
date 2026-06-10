@@ -46,7 +46,6 @@ export default function ContentLayout({ children, title }: ContentLayoutProps) {
             © 2026 KelimeLink. Tüm hakları saklıdır.
           </div>
           <div className="app-footer__links">
-            <a href="/">Ana Sayfa</a>
             <a href="/nasil-oynanir">Nasıl Oynanır?</a>
             <a href="/hakkinda">Hakkında</a>
             <a href="/arsiv">Bulmaca Arşivi</a>

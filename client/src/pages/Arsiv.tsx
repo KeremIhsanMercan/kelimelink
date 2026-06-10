@@ -12,12 +12,13 @@ interface ArchivePuzzle {
   word_a: string;
   word_b: string;
   path: string | null;
+  player_name: string | null;
 }
 
 export default function Archive() {
   const [puzzles, setPuzzles] = useState<ArchivePuzzle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const { isDark, toggleDarkMode } = useDarkMode();
   const isHydrated = useHydration();
   useRenderReady();
@@ -68,7 +69,6 @@ export default function Archive() {
               © 2026 KelimeLink. Tüm hakları saklıdır.
             </div>
             <div className="app-footer__links">
-              <a href="/">Ana Sayfa</a>
               <a href="/nasil-oynanir">Nasıl Oynanır?</a>
               <a href="/hakkinda">Hakkında</a>
               <a href="/arsiv">Bulmaca Arşivi</a>
@@ -132,8 +132,13 @@ export default function Archive() {
                       <div className="archive-path">
                         {puzzle.path.split(',').map((w) => w.trim()).join(' ➔ ')}
                       </div>
+                      {puzzle.player_name && (
+                        <p className="archive-player" style={{ marginTop: '10px' }}>
+                          <strong>Çözen Oyuncu:</strong> {puzzle.player_name}
+                        </p>
+                      )}
                       <p className="archive-explanation">
-                        Bu çözüm yolu, oyuncularımız tarafından doğal dil işleme algoritmalarımız (%26 ve üzeri benzerlik) kullanılarak bulunmuştur.
+                        Bu çözüm yolu, {puzzle.player_name} tarafından doğal dil işleme algoritmalarımız (%26 ve üzeri benzerlik) kullanılarak bulunmuştur.
                         Anlamsal bağlar kurularak hedefe en hızlı şekilde bu yol üzerinden varılmıştır.
                       </p>
                     </div>
@@ -153,7 +158,6 @@ export default function Archive() {
             © 2026 KelimeLink. Tüm hakları saklıdır.
           </div>
           <div className="app-footer__links">
-            <a href="/">Ana Sayfa</a>
             <a href="/nasil-oynanir">Nasıl Oynanır?</a>
             <a href="/hakkinda">Hakkında</a>
             <a href="/arsiv">Bulmaca Arşivi</a>
