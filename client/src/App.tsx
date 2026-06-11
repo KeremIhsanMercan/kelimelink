@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users, ArrowUp } from 'lucide-react';
+import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users, ArrowUp, Menu, ChevronDown, BookOpen, Clock, PenTool, Signpost } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useVsMode } from './hooks/useVsMode';
@@ -17,7 +17,7 @@ import VsModeModal from './components/VsModeModal';
 import VsRoomModal from './components/VsRoomModal';
 import VsGameOverModal from './components/VsGameOverModal';
 import VsRematchModal from './components/VsRematchModal';
-import CookieBanner from './components/CookieBanner';
+// CookieBanner removed for AdSense built-in CMP
 import Footer from './components/Footer';
 import StructuredData, {
   createWebSiteSchema,
@@ -78,6 +78,8 @@ export default function App() {
   const { isDark, toggleDarkMode } = useDarkMode();
   const [showProfile, setShowProfile] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [showNavMenu, setShowNavMenu] = useState(false);
+  const [hideScrollIndicator, setHideScrollIndicator] = useState(false);
 
   const [hasClickedInfo, setHasClickedInfo] = useState(() => {
     return localStorage.getItem('kelimelink_clicked_info_v2') === 'true';
@@ -386,6 +388,25 @@ export default function App() {
       {/* Üst Başlık */}
       <header className="app-header">
         <div className="app-header__left-actions">
+          <div className="nav-menu-container" style={{ position: 'relative' }}>
+            <button
+              className={`app-header__action-btn`}
+              onClick={() => setShowNavMenu(!showNavMenu)}
+              aria-label="Menü"
+              title="Menü"
+            >
+              <Menu size={20} />
+            </button>
+            {showNavMenu && (
+              <div className="nav-menu-dropdown">
+                <a href="/nasil-oynanir" className="nav-menu-item"><Signpost size={16} /> Detaylı Oyun Rehberi</a>
+                <a href="/hakkinda" className="nav-menu-item"><PenTool size={16} /> Hakkında</a>
+                <a href="/arsiv" className="nav-menu-item"><Clock size={16} /> Arşiv</a>
+                <a href="/blog/konseptnet-nasil-calisir" className="nav-menu-item"><BookOpen size={16} /> Blog: ConceptNet</a>
+                <a href="/blog/kelime-oyunlarinda-nlp" className="nav-menu-item"><BookOpen size={16} /> Blog: NLP</a>
+              </div>
+            )}
+          </div>
           <button
             className={`app-header__action-btn`}
             onClick={handleInfoClick}
@@ -520,6 +541,28 @@ export default function App() {
             onWinAnimationFinish={finishWinAnimation}
           />
         )}
+        {guessCount === 0 && !hideScrollIndicator && (
+          <button
+            className="scroll-down-indicator"
+            onClick={() => {
+              const article = document.querySelector('.seo-homepage-content');
+              if (article) {
+                const headerOffset = 56;
+                const elementPosition = article.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + (document.querySelector('.app-layout')?.scrollTop || 0) - headerOffset;
+                document.querySelector('.app-layout')?.scrollTo({
+                  top: offsetPosition,
+                  behavior: 'smooth'
+                });
+              }
+              setHideScrollIndicator(true);
+            }}
+            aria-label="Aşağı Kaydır"
+          >
+            <ChevronDown size={24} />
+            <span>Bilgi</span>
+          </button>
+        )}
       </main>
 
       {/* Kazanma Bannerı - vs modunda sadece kazanan için göster */}
@@ -600,12 +643,6 @@ export default function App() {
           isLoading={vsMode.isLoading}
         />
       )}
-
-      <CookieBanner />
-
-
-
-
       <article className="seo-homepage-content" style={{ paddingBottom: '24px' }}>
         {seoText}
       </article>
