@@ -4,19 +4,29 @@ export default function CookieBanner() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // Do not show cookie banner to crawlers to prevent interstitial penalties
-    if (typeof navigator !== 'undefined') {
-      const ua = navigator.userAgent.toLowerCase();
-      const isCrawler = /googlebot|mediapartners|adsbot|bingbot|yandex|baiduspider|slurp|headlesschrome|bot|spider|crawl/.test(ua) || 
-                        navigator.webdriver === true || 
-                        (window as any).__PRERENDER_INJECTED !== undefined;
-      if (isCrawler) return;
-    }
-
     const consent = localStorage.getItem('kelimelink_cookie_consent');
-    if (!consent) {
+    if (consent) return; // Already consented, do nothing
+
+    // To prevent the banner from showing up in Google's Inspection Tool screenshots
+    // (which can cause AdSense rejections), we wait for the first real user interaction.
+    const handleInteraction = () => {
       setShow(true);
-    }
+      cleanup();
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('mousemove', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('scroll', handleInteraction);
+    };
+
+    window.addEventListener('mousemove', handleInteraction, { once: true });
+    window.addEventListener('touchstart', handleInteraction, { once: true });
+    window.addEventListener('keydown', handleInteraction, { once: true });
+    window.addEventListener('scroll', handleInteraction, { once: true });
+
+    return cleanup;
   }, []);
 
   const handleAccept = () => {

@@ -76,23 +76,7 @@ export default function App() {
 
   const { isDark, toggleDarkMode } = useDarkMode();
   const [showProfile, setShowProfile] = useState(false);
-  const [showInfo, setShowInfo] = useState(() => {
-    // Prevent the modal from showing automatically for crawlers to avoid interstitial penalties
-    if (typeof navigator !== 'undefined') {
-      const ua = navigator.userAgent.toLowerCase();
-      const isCrawler = /googlebot|mediapartners|adsbot|bingbot|yandex|baiduspider|slurp|headlesschrome|bot|spider|crawl/.test(ua) || 
-                        navigator.webdriver === true || 
-                        (window as any).__PRERENDER_INJECTED !== undefined;
-      if (isCrawler) return false;
-    }
-
-    const hasVisited = localStorage.getItem('kelimelink_visited');
-    if (!hasVisited) {
-      localStorage.setItem('kelimelink_visited', 'true');
-      return true;
-    }
-    return false;
-  });
+  const [showInfo, setShowInfo] = useState(false);
 
   const [hasClickedInfo, setHasClickedInfo] = useState(() => {
     return localStorage.getItem('kelimelink_clicked_info_v2') === 'true';
