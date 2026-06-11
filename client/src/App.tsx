@@ -274,6 +274,14 @@ export default function App() {
               <a href="/hakkinda">Hakkında daha fazla bilgi</a>
               <a href="/blog/konseptnet-nasil-calisir">ConceptNet Nasıl Çalışır?</a>
               <a href="/blog/kelime-oyunlarinda-nlp">Kelime Oyunlarında NLP</a>
+              <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
+              <a href="/kullanim-kosullari">Kullanım Şartları</a>
+              <a href="mailto:[EMAIL_ADDRESS]">İletişim</a>
+              {/* newline respecting flex */}
+              <div style={{ width: '100%' }}></div>
+              <div className="app-footer__copyright">
+                © 2026 KelimeLink. Tüm hakları saklıdır.
+              </div>
             </div>
           </article>
         </main>
@@ -290,7 +298,7 @@ export default function App() {
       <header className="app-header">
         <div className="app-header__left-actions">
           <button
-            className={`app-header__action-btn ${!hasClickedInfo ? 'has-glow' : ''}`}
+            className={`app-header__action-btn`}
             onClick={handleInfoClick}
             aria-label="Nasıl Oynanır?"
             title="Nasıl Oynanır?"
@@ -511,9 +519,6 @@ export default function App() {
 
       <footer className="app-footer">
         <div className="app-footer__content">
-          <div className="app-footer__copyright">
-            © 2026 KelimeLink. Tüm hakları saklıdır.
-          </div>
           <div className="app-footer__links">
             <a href="/nasil-oynanir">Nasıl Oynanır?</a>
             <a href="/hakkinda">Hakkında</a>
@@ -523,6 +528,9 @@ export default function App() {
             <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
             <a href="/kullanim-kosullari">Kullanım Şartları</a>
             <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
+          </div>
+          <div className="app-footer__copyright">
+            © 2026 KelimeLink. Tüm hakları saklıdır.
           </div>
         </div>
       </footer>

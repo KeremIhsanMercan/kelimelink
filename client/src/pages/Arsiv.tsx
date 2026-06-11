@@ -53,21 +53,21 @@ export default function Archive() {
 
   // SEO intro content — shown in both loading and loaded states
   const seoIntro = (
-    <div className="archive-seo-intro">
-      <p>
+    <>
+      <p className="archive-description">
         KelimeLink her gün UTC gece yarısında yeni bir kelime çifti yayınlar. Tüm oyuncular aynı
         günlük bulmacayı çözer ve en kısa yolu bulan oyuncu günün rekortmeni olarak arşivlenir.
         Aşağıda geçmiş günlere ait bulmacaları, başlangıç ve hedef kelimelerini, bulunan en kısa
         çözüm yollarını ve bu yolları keşfeden oyuncuları inceleyebilirsiniz.
       </p>
       <h2>Çözüm Yolları Nasıl Belirleniyor?</h2>
-      <p>
+      <p className="archive-description">
         Her çözüm yolu, oyuncuların doğal dil işleme algoritmalarımız kullanılarak bulduğu
         anlamsal bağlantı zincirlerinden oluşur. İki kelime arasındaki benzerlik skoru %26 ve
         üzerinde olduğunda bağlantı oluşur. En az kelimeyle hedefe ulaşan yol, o günün en kısa
         çözümü olarak kaydedilir.
       </p>
-    </div>
+    </>
   );
 
   if (!isHydrated || isLoading) {
@@ -94,14 +94,14 @@ export default function Archive() {
             </button>
           </div>
         </header>
-        <main className="archive-main" style={{ alignItems: 'center' }}>
+        <main className="archive-main">
           <div className="archive-container">
-            <h1>KelimeLink Günlük Çözümler Arşivi</h1>
+            <h1>KelimeLink Günlük Çözümler</h1>
             {seoIntro}
-          </div>
-          <div className="loading-screen" style={{ height: 'auto' }}>
-            <Loader2 className="loading-spinner" />
-            <p className="loading-text">Arşiv yükleniyor...</p>
+            <div className="loading-screen" style={{ height: 'auto', marginTop: '40px' }}>
+              <Loader2 className="loading-spinner" />
+              <p className="loading-text">Arşiv yükleniyor...</p>
+            </div>
           </div>
         </main>
         <footer className="app-footer">
@@ -152,9 +152,7 @@ export default function Archive() {
       <main className="archive-main">
         <div className="archive-container">
           <h1>KelimeLink Günlük Çözümler</h1>
-          <p className="archive-description">
-            Geçmiş günlere ait bulmacaları ve oyuncularımız tarafından bulunan en kısa çözüm yollarını aşağıda inceleyebilirsiniz.
-          </p>
+          {seoIntro}
 
           {puzzles.length === 0 ? (
             <p>Geçmiş günlere ait bir kayıtlar yüklenemedi.</p>
@@ -177,10 +175,6 @@ export default function Archive() {
                           <strong>Çözen Oyuncu:</strong> {puzzle.player_name}
                         </p>
                       )}
-                      <p className="archive-explanation">
-                        Bu çözüm yolu, {puzzle.player_name} tarafından doğal dil işleme algoritmalarımız (%26 ve üzeri benzerlik) kullanılarak bulunmuştur.
-                        Anlamsal bağlar kurularak hedefe en hızlı şekilde bu yol üzerinden varılmıştır.
-                      </p>
                     </div>
                   ) : (
                     <p><em>Bu bulmaca için henüz kaydedilmiş bir çözüm yolu bulunamadı.</em></p>
