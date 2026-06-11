@@ -80,7 +80,9 @@ export default function App() {
     // Prevent the modal from showing automatically for crawlers to avoid interstitial penalties
     if (typeof navigator !== 'undefined') {
       const ua = navigator.userAgent.toLowerCase();
-      const isCrawler = /googlebot|bingbot|yandex|baiduspider|slurp|headlesschrome/.test(ua) || (window as any).__PRERENDER_INJECTED !== undefined;
+      const isCrawler = /googlebot|mediapartners|adsbot|bingbot|yandex|baiduspider|slurp|headlesschrome|bot|spider|crawl/.test(ua) || 
+                        navigator.webdriver === true || 
+                        (window as any).__PRERENDER_INJECTED !== undefined;
       if (isCrawler) return false;
     }
 
