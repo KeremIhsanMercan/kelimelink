@@ -210,7 +210,7 @@ export default function App() {
       <h2>Oyun Modları ve Seçenekler</h2>
       <h3>🗓️ Günlük Bulmaca (Günün Kelimeleri)</h3>
       <p>
-        Her gün UTC gece yarısında tüm oyuncular için ortak ve yepyeni bir kelime çifti yayınlanır.
+        Her gün TSİ 03:00'te tüm oyuncular için ortak ve yepyeni bir kelime çifti yayınlanır.
         Tüm oyuncular aynı zorluk seviyesindeki bulmacayı çözmeye çalışır. Hedefe en az kelime
         tahminiyle ve en hızlı şekilde ulaşan oyuncu, günün rekortmeni olarak arşivlerimize
         kaydedilir. Her gün beyninize yeni bir egzersiz yaptırmak için idealdir.
@@ -219,7 +219,7 @@ export default function App() {
       <p>
         Günlük bulmacayı çözdükten sonra oynamaya devam etmek isterseniz, Pratik Modu tam size göre.
         Sınırsız sayıda rastgele kelime çifti ile antrenman yapabilir, yeni stratejiler geliştirebilirsiniz.
-        Zor durumda kaldığınızda "İpucu" alma özelliği aktiftir — sistemden yardım isteyerek
+        Zor durumda kaldığınızda "İpucu" alma özelliği aktiftir, sistemden yardım isteyerek
         hedefe giden yoldaki eksik halkaları öğrenebilirsiniz.
       </p>
       <h3>👥 VS Modu (Çok Oyunculu)</h3>
@@ -248,6 +248,77 @@ export default function App() {
         hızlı ve güvenilir arka plan işlemleri Python FastAPI teknolojileriyle desteklenmektedir.
       </p>
 
+      <h2>Sıkça Sorulan Sorular (SSS)</h2>
+
+      <h3>Kelimelerin bağlantı skoru nasıl bulunuyor?</h3>
+      <p>
+        KelimeLink, Türkçe kelimeleri anlamlarına göre 300 boyutlu matematiksel vektörler olarak temsil eden
+        gelişmiş bir yapay zeka ve doğal dil işleme (NLP) modeli kullanır. Oyuna yazdığınız her kelimenin
+        matematiksel konumu hesaplanır ve oyun tahtasındaki diğer kelimelerin konumlarıyla karşılaştırılarak
+        aralarındaki anlamsal mesafe <strong>kosinüs benzerliği</strong> ile hesaplanır. Anlamca yakın kelimeler, bu çok boyutlu uzayda birbirine daha
+        yakın noktalarda bulunurlar.
+      </p>
+
+      <h3>Kosinüs Benzerliği (Cosine Similarity) nedir?</h3>
+      <p>
+        Kosinüs benzerliği, makine öğrenmesi ve veri biliminde iki vektör arasındaki açıyı ölçerek
+        birbirlerine ne kadar benzediklerini bulmaya yarayan standart bir formüldür. Kelimeler 300 boyutlu
+        uzayda birbirlerine ne kadar yakın bir yönü gösteriyorsa, anlamsal olarak o kadar bağlantılıdırlar.
+        KelimeLink, bu karmaşık matematiksel hesabı arka planda anlık olarak yapar ve sonucu sizin için
+        anlaşılır yüzdelik bir skora (örneğin %45) dönüştürür.
+      </p>
+
+      <h3>Neden bağlantı sınırı %26?</h3>
+      <p>
+        Kullandığımız dil modelinde, kelimeler arası ilişkilerin "rastgele" olmaktan çıkıp gerçekten anlamlı
+        ve sezgisel bir seviyeye ulaştığı denge noktası, kapsamlı testlerimiz ve kullanıcı geri bildirimlerisonucunda %26 olarak belirlenmiştir.
+        Bu oranın altındaki skorlar genellikle çok zayıf veya tesadüfi ilişkileri ifade ederken, %26 ve üzerindeki
+        skorlar iki kelime arasında güçlü bir "anlamsal köprü" kurmaya yetecek kadar yakındır. Farklı bir oran öneriniz var ise,
+        kelime örnekleriniz ile beraber <a href="/mailto:krmhsnmrcn220@gmail.com" style={{ textDecoration: 'underline', color: 'var(--primary-color)' }}>bize</a> ulaşabilirsiniz.
+      </p>
+
+      <h3>Bağlanması gerektiğini düşündüğüm kelimeler bağlanmadı, ne yapmalıyım?</h3>
+      <p>
+        Yapay zeka dil modelleri devasa metin verilerinden (Wikipedia, haber siteleri, makaleler vb.) öğrenirler.
+        Bazen günlük hayatta bize çok bariz gelen kültürel, yerel veya mecazi bir bağlantı, modelin eğitim verisinde
+        istatistiksel olarak yeterince güçlü yer almamış olabilir. Bu durumu elimizden geldiğince düzeltmek için sizden
+        yardım alıyoruz. Bağlanması gerektiğini düşündüğünüz kelime çiftlerini Bağlananlar ve Bağlanmayanlar listesindeki
+        <strong> '+' </strong> butonuna tıklayarak bize gönderebilirsiniz. Gönderdiğiniz kelime çiftleri ekibimiz tarafından incelenerek,
+        kelimelerin birbirine bağlanmasının uygun olduğuna karar verilirse bu kelimeler birbirine bağlanabilir hale getirilecektir.
+      </p>
+
+      <h3>Pratik modundaki ipuçları nasıl çalışıyor?</h3>
+      <p>
+        Pratik modunda ipucu istediğinizde, sistem tahtaya eklediğiniz son kelime ile diğer hedef kelime arasındaki bağlantı uzayını tarar.
+        Amacı, eklediğiniz kelimeye kesin olarak bağlanabilen (benzerliği <strong>%26'nın üzerinde</strong> olan) yeni bir kelime bulmaktır.
+        Bunu yaparken üç farklı strateji izler:
+        <br /><br />
+        <strong>1. Normal İpucu:</strong> Doğrudan çözümü vermemek için, tahtadaki kelimeye ne çok uzak ne de çok yakın olan
+        (benzerliği %15 ile %25 arasında olan) dengeli bir kelime seçer. Böylece var olduğunuz noktadan, hedefe doğru bir adım atmış olursunuz.<br />
+        <strong>2. Süper İpucu:</strong> 4 ipucu isteğinizden sonraki her isteğiniz Süper İpucu olarak değerlendirilir.
+        Bu ipucu için hem eklediğiniz kelimeye hem de hedef kelimeye aynı anda bağlanabilen
+        (her ikisine de %26 veya daha fazla benzeyen) nadir "altın köprü" kelimelerini arar.<br />
+        <strong>3. En İyi Alternatif:</strong> Eğer yukarıdaki koşullara uyan bir kelime bulunamazsa,
+        tahtadaki kelimeye bağlanan kelimeler arasından <strong>hedefe en çok yaklaşan</strong> (en yüksek benzerlik skoruna sahip)
+        kelimeyi seçerek size ipucu olarak sunar.
+      </p>
+
+      <h3>İpuçları neden bazen çok üst seviye veya yabancı kökenli kelimeler veriyor?</h3>
+      <p>
+        KelimeLink'in altyapısını oluşturan dil modeli, kelime ilişkilerini birçok farklı dilde yazılmış devasa metin veri setlerini (akademik makaleler, kitaplar, haberler vb.)
+        okuyarak öğrenmiştir. Türkçe; Arapça, Farsça ve Fransızca gibi dillerden birçok kelime almış zengin bir dildir.
+        Sistemimiz size bir ipucu seçerken kelimenin günlük hayattaki popülerliğine değil, hedef kelimeye olan
+        <strong> matematiksel yakınlığına</strong> bakar. Bu nedenle bazen hedefe giden en optimal ve kısa yol;
+        günlük konuşmada sık kullanmadığımız eski bir kelimeden, eş anlamlı yabancı kökenli bir kelimeden veya
+        akademik bir terimden geçebilir.
+      </p>
+
+      <h3>KelimeLink oynamak ücretli mi?</h3>
+      <p>
+        Hayır, KelimeLink oynamak tamamen ücretsizdir. Her gün yenilenen Günlük Bulmacayı çözebilir,
+        Pratik modunda sınırsız antrenman yapabilir ve arkadaşlarınızla VS modunda çevrimiçi olarak hiçbir
+        ücret ödemeden yarışabilirsiniz.
+      </p>
       <button
         className="scroll-to-top-btn"
         onClick={() => document.querySelector('.app-layout')?.scrollTo({ top: 0, behavior: 'smooth' })}
