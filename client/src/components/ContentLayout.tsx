@@ -78,9 +78,6 @@ export default function ContentLayout({
 
       <footer className="app-footer">
         <div className="app-footer__content">
-          <div className="app-footer__copyright">
-            © 2026 KelimeLink. Tüm hakları saklıdır.
-          </div>
           <div className="app-footer__links">
             <a href="/nasil-oynanir">Nasıl Oynanır?</a>
             <a href="/hakkinda">Hakkında</a>
@@ -90,6 +87,9 @@ export default function ContentLayout({
             <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
             <a href="/kullanim-kosullari">Kullanım Şartları</a>
             <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
+          </div>
+          <div className="app-footer__copyright">
+            © 2026 KelimeLink. Tüm hakları saklıdır.
           </div>
         </div>
       </footer>

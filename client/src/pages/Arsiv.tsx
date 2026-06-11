@@ -1,10 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Loader2, Moon, Sun } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useHydration } from '../hooks/useHydration';
-import { useRenderReady } from '../hooks/useRenderReady';
-import { useDarkMode } from '../hooks/useDarkMode';
-import { useSEO } from '../hooks/useSEO';
-import StructuredData, { createBreadcrumbSchema } from '../components/StructuredData';
+import ContentLayout from '../components/ContentLayout';
 import '../index.css';
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
@@ -17,29 +14,24 @@ interface ArchivePuzzle {
   player_name: string | null;
 }
 
+const SEO_DATA = {
+  title: 'Günlük Çözümler Arşivi — KelimeLink Bulmaca Arşivi',
+  description: 'KelimeLink günlük bulmaca arşivi. Geçmiş günlere ait kelime bağlantı bulmacalarını, en kısa çözüm yollarını ve rekortmen oyuncuları inceleyin.',
+  path: '/arsiv',
+  ogTitle: 'KelimeLink Bulmaca Arşivi — Günlük Çözümler',
+  ogDescription: 'Geçmiş günlere ait KelimeLink bulmacalarını ve en kısa çözüm yollarını inceleyin.',
+};
+
+const BREADCRUMBS = [
+  { name: 'Ana Sayfa', path: '/' },
+  { name: 'Bulmaca Arşivi', path: '/arsiv' },
+];
+
 export default function Archive() {
   const [puzzles, setPuzzles] = useState<ArchivePuzzle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { isDark, toggleDarkMode } = useDarkMode();
   const isHydrated = useHydration();
-  useRenderReady();
-
-  useSEO({
-    title: 'Günlük Çözümler Arşivi — KelimeLink Bulmaca Arşivi',
-    description: 'KelimeLink günlük bulmaca arşivi. Geçmiş günlere ait kelime bağlantı bulmacalarını, en kısa çözüm yollarını ve rekortmen oyuncuları inceleyin.',
-    path: '/arsiv',
-    ogTitle: 'KelimeLink Bulmaca Arşivi — Günlük Çözümler',
-    ogDescription: 'Geçmiş günlere ait KelimeLink bulmacalarını ve en kısa çözüm yollarını inceleyin.',
-  });
-
-  const breadcrumbSchema = useMemo(
-    () => createBreadcrumbSchema([
-      { name: 'Ana Sayfa', path: '/' },
-      { name: 'Bulmaca Arşivi', path: '/arsiv' },
-    ]),
-    []
-  );
 
   useEffect(() => {
     fetch(`${API_BASE}/api/archive`)
@@ -72,137 +64,55 @@ export default function Archive() {
 
   if (!isHydrated || isLoading) {
     return (
-      <div className="app-layout" style={{ overflowY: 'auto' }}>
-        <StructuredData data={breadcrumbSchema} />
-        <header className="app-header">
-          <div className="app-header__left-actions">
-            <a href="/" className="app-header__action-btn" title="Ana Sayfaya Dön">
-              <ArrowLeft size={20} />
-            </a>
+      <ContentLayout title="Bulmaca Arşivi" seo={SEO_DATA} breadcrumbs={BREADCRUMBS}>
+        <div className="archive-container" style={{ maxWidth: '100%' }}>
+          <h1>KelimeLink Günlük Çözümler</h1>
+          {seoIntro}
+          <div className="loading-screen" style={{ height: 'auto', marginTop: '40px' }}>
+            <Loader2 className="loading-spinner" />
+            <p className="loading-text">Arşiv yükleniyor...</p>
           </div>
-          <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
-          <h1 className="app-header__title">KelimeLink</h1>
-          <span className="app-header__subtitle">Arşiv</span>
-          <div className="app-header__actions">
-            <button
-              className="app-header__action-btn"
-              onClick={toggleDarkMode}
-              aria-label="Karanlık Modu Değiştir"
-              title="Karanlık Modu Değiştir"
-            >
-              {isDark ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-          </div>
-        </header>
-        <main className="archive-main">
-          <div className="archive-container">
-            <h1>KelimeLink Günlük Çözümler</h1>
-            {seoIntro}
-            <div className="loading-screen" style={{ height: 'auto', marginTop: '40px' }}>
-              <Loader2 className="loading-spinner" />
-              <p className="loading-text">Arşiv yükleniyor...</p>
-            </div>
-          </div>
-        </main>
-        <footer className="app-footer">
-          <div className="app-footer__content">
-            <div className="app-footer__copyright">
-              © 2026 KelimeLink. Tüm hakları saklıdır.
-            </div>
-            <div className="app-footer__links">
-              <a href="/nasil-oynanir">Nasıl Oynanır?</a>
-              <a href="/hakkinda">Hakkında</a>
-              <a href="/arsiv">Bulmaca Arşivi</a>
-              <a href="/blog/konseptnet-nasil-calisir">ConceptNet Nasıl Çalışır?</a>
-              <a href="/blog/kelime-oyunlarinda-nlp">Kelime Oyunlarında NLP</a>
-              <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
-              <a href="/kullanim-kosullari">Kullanım Şartları</a>
-              <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
-            </div>
-          </div>
-        </footer>
-      </div>
+        </div>
+      </ContentLayout>
     );
   }
 
   return (
-    <div className="app-layout" style={{ overflowY: 'auto' }}>
-      <StructuredData data={breadcrumbSchema} />
-      <header className="app-header">
-        <div className="app-header__left-actions">
-          <a href="/" className="app-header__action-btn" title="Ana Sayfaya Dön">
-            <ArrowLeft size={20} />
-          </a>
-        </div>
-        <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
-        <h1 className="app-header__title">KelimeLink</h1>
-        <span className="app-header__subtitle">Bulmaca Arşivi</span>
-        <div className="app-header__actions">
-          <button
-            className="app-header__action-btn"
-            onClick={toggleDarkMode}
-            aria-label="Karanlık Modu Değiştir"
-            title="Karanlık Modu Değiştir"
-          >
-            {isDark ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-        </div>
-      </header>
+    <ContentLayout title="Bulmaca Arşivi" seo={SEO_DATA} breadcrumbs={BREADCRUMBS}>
+      <div className="archive-container" style={{ maxWidth: '100%' }}>
+        <h1>KelimeLink Günlük Çözümler</h1>
+        {seoIntro}
 
-      <main className="archive-main">
-        <div className="archive-container">
-          <h1>KelimeLink Günlük Çözümler</h1>
-          {seoIntro}
-
-          {puzzles.length === 0 ? (
-            <p>Geçmiş günlere ait bir kayıtlar yüklenemedi.</p>
-          ) : (
-            <div className="archive-list">
-              {puzzles.map((puzzle) => (
-                <article key={puzzle.date} className="archive-card">
-                  <h2>{new Date(puzzle.date).toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h2>
-                  <p>
-                    <strong>Hedef:</strong> <code>{puzzle.word_a}</code> kelimesinden <code>{puzzle.word_b}</code> kelimesine ulaşmak.
-                  </p>
-                  {puzzle.path ? (
-                    <div>
-                      <p><strong>En Kısa Çözüm Yolu:</strong></p>
-                      <div className="archive-path">
-                        {puzzle.path.split(',').map((w) => w.trim()).join(' ➔ ')}
-                      </div>
-                      {puzzle.player_name && (
-                        <p className="archive-player" style={{ marginTop: '10px' }}>
-                          <strong>Çözen Oyuncu:</strong> {puzzle.player_name}
-                        </p>
-                      )}
+        {puzzles.length === 0 ? (
+          <p>Geçmiş günlere ait bir kayıtlar yüklenemedi.</p>
+        ) : (
+          <div className="archive-list">
+            {puzzles.map((puzzle) => (
+              <article key={puzzle.date} className="archive-card">
+                <h2>{new Date(puzzle.date).toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h2>
+                <p>
+                  <strong>Hedef:</strong> <code>{puzzle.word_a}</code> kelimesinden <code>{puzzle.word_b}</code> kelimesine ulaşmak.
+                </p>
+                {puzzle.path ? (
+                  <div>
+                    <p><strong>En Kısa Çözüm Yolu:</strong></p>
+                    <div className="archive-path">
+                      {puzzle.path.split(',').map((w) => w.trim()).join(' ➔ ')}
                     </div>
-                  ) : (
-                    <p><em>Bu bulmaca için henüz kaydedilmiş bir çözüm yolu bulunamadı.</em></p>
-                  )}
-                </article>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-
-      <footer className="app-footer">
-        <div className="app-footer__content">
-          <div className="app-footer__copyright">
-            © 2026 KelimeLink. Tüm hakları saklıdır.
+                    {puzzle.player_name && (
+                      <p className="archive-player" style={{ marginTop: '10px' }}>
+                        <strong>Çözen Oyuncu:</strong> {puzzle.player_name}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p><em>Bu bulmaca için henüz kaydedilmiş bir çözüm yolu bulunamadı.</em></p>
+                )}
+              </article>
+            ))}
           </div>
-          <div className="app-footer__links">
-            <a href="/nasil-oynanir">Nasıl Oynanır?</a>
-            <a href="/hakkinda">Hakkında</a>
-            <a href="/arsiv">Bulmaca Arşivi</a>
-            <a href="/blog/konseptnet-nasil-calisir">ConceptNet Nasıl Çalışır?</a>
-            <a href="/blog/kelime-oyunlarinda-nlp">Kelime Oyunlarında NLP</a>
-            <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
-            <a href="/kullanim-kosullari">Kullanım Şartları</a>
-            <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
-          </div>
-        </div>
-      </footer>
-    </div>
+        )}
+      </div>
+    </ContentLayout>
   );
 }

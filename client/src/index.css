@@ -2401,6 +2401,7 @@ html.dark {
     flex-direction: column;
     min-height: calc(100vh - var(--header-height));
     width: 100%;
+    flex: 1 0 auto;
 }
 
 .landing-hero {
@@ -2489,7 +2490,7 @@ html.dark .landing-hero {
 
 .seo-homepage-content {
     max-width: 720px;
-    margin: 48px auto;
+    margin: 0 auto;
     padding: 0 32px 64px;
     text-align: left;
     line-height: 1.7;
@@ -2570,4 +2571,23 @@ html.dark .landing-hero {
 
 .archive-seo-intro a:hover {
     text-decoration: underline;
+}
+
+.scroll-to-top-btn {
+    margin-top: 32px;
+    padding: 10px 24px;
+    border-radius: 100px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    margin: 0 auto 0px;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all var(--transition-fast);
+}
+
+.scroll-to-top-btn:hover {
+    filter: brightness(0.9);
+    transform: translateY(-2px);
 }

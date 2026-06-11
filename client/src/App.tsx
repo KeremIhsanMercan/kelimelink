@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users } from 'lucide-react';
+import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users, ArrowUp } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useVsMode } from './hooks/useVsMode';
@@ -18,6 +18,7 @@ import VsRoomModal from './components/VsRoomModal';
 import VsGameOverModal from './components/VsGameOverModal';
 import VsRematchModal from './components/VsRematchModal';
 import CookieBanner from './components/CookieBanner';
+import Footer from './components/Footer';
 import StructuredData, {
   createWebSiteSchema,
   createWebApplicationSchema,
@@ -181,14 +182,100 @@ export default function App() {
   const isInitialLoading = !isHydrated || isLoading;
   const showInitialError = error && nodes.length === 0 && !isLoading;
 
+  const seoText = (
+    <>
+      <h2>KelimeLink Nedir?</h2>
+      <p>
+        KelimeLink, Türkçe'nin zengin kelime dünyasında anlamsal köprüler kurduğunuz
+        yenilikçi ve zeka geliştirici bir kelime bulmacasıdır. Her bulmacada size verilen
+        iki farklı (başlangıç ve hedef) kelime arasında anlam bağlantıları kurarak bir yol
+        oluşturmanız gerekir. Yapay zeka tabanlı doğal dil işleme (NLP) teknolojisi sayesinde,
+        yazdığınız her kelimenin diğer kelimelerle olan anlamsal benzerliği gerçek zamanlı
+        olarak ölçülür. Hem kelime dağarcığınızı test eden hem de analitik düşünme becerinizi
+        geliştiren bu semantik oyun, klasik bulmaca ve kelime oyunlarına yepyeni bir boyut kazandırıyor.
+      </p>
+
+      <h2>Nasıl Oynanır ve Kurallar Nelerdir?</h2>
+      <p>
+        Oyunun amacı, başlangıç kelimesinden hedef kelimeye en kısa yoldan ulaşmaktır.
+        Sistem, kelimeler arasındaki anlamsal benzerliği çok boyutlu vektör uzayında ölçmek için
+        gelişmiş ConceptNet Numberbatch dil modelini kullanır. Eklediğiniz her yeni kelime,
+        oyun tahtasındaki tüm mevcut kelimelerle anında karşılaştırılır.
+        İki kelime arasındaki benzerlik (kosinüs benzerliği) skoru %26 veya üzerindeyse,
+        aralarında otomatik olarak görsel bir bağlantı ağı (köprü) oluşur.
+        Başlangıç kelimesinden hedef kelimeye kadar kesintisiz, mantıklı bir zincir
+        oluşturduğunuzda bulmacayı başarıyla çözmüş olursunuz.
+      </p>
+
+      <h2>Oyun Modları ve Seçenekler</h2>
+      <h3>🗓️ Günlük Bulmaca (Günün Kelimeleri)</h3>
+      <p>
+        Her gün UTC gece yarısında tüm oyuncular için ortak ve yepyeni bir kelime çifti yayınlanır.
+        Tüm oyuncular aynı zorluk seviyesindeki bulmacayı çözmeye çalışır. Hedefe en az kelime
+        tahminiyle ve en hızlı şekilde ulaşan oyuncu, günün rekortmeni olarak arşivlerimize
+        kaydedilir. Her gün beyninize yeni bir egzersiz yaptırmak için idealdir.
+      </p>
+      <h3>⚔️ Pratik Modu (Sınırsız Oyun)</h3>
+      <p>
+        Günlük bulmacayı çözdükten sonra oynamaya devam etmek isterseniz, Pratik Modu tam size göre.
+        Sınırsız sayıda rastgele kelime çifti ile antrenman yapabilir, yeni stratejiler geliştirebilirsiniz.
+        Zor durumda kaldığınızda "İpucu" alma özelliği aktiftir — sistemden yardım isteyerek
+        hedefe giden yoldaki eksik halkaları öğrenebilirsiniz.
+      </p>
+      <h3>👥 VS Modu (Çok Oyunculu)</h3>
+      <p>
+        Kelime yeteneklerinizi arkadaşlarınıza karşı test edin! Arkadaşlarınızla gerçek zamanlı olarak
+        aynı bulmacayı çözmek için yarışın. Özel bir oda oluşturarak veya mevcut bir odaya katılarak,
+        aynı kelime çiftini kimin daha az tahminle ve daha hızlı çözeceğini rekabet dolu bir ortamda belirleyin.
+      </p>
+
+      <h2>Neden KelimeLink Oynamalısınız?</h2>
+      <p>
+        Düzenli olarak KelimeLink oynamak, dil becerilerinizi ve analitik düşünme yeteneğinizi geliştirir.
+        Kelimelerin sadece eş anlamlılarını değil, bağlamsal ve semantik (anlamsal) ilişkilerini de
+        düşünmeye zorladığı için zihinsel esnekliği artırır. Geleneksel kare bulmaca, çengel bulmaca veya
+        kelime avı oyunlarından farklı olarak, doğrudan yapay zeka ile etkileşime girerek kelimelerin
+        derinliklerine inmenizi sağlar. Hem öğrenciler, hem dil tutkunları, hem de zihin jimnastiği
+        yapmak isteyen herkes için mükemmel bir beyin egzersizidir.
+      </p>
+
+      <h2>Arkasındaki Teknoloji ve Altyapı</h2>
+      <p>
+        KelimeLink, Türkçe kelimelerin anlamsal ilişkilerini 300 boyutlu vektörlerle temsil eden
+        Açık Kaynaklı ConceptNet Numberbatch kelime gömme (word embedding) NLP modelini kullanır.
+        İki kelimenin vektörleri arasındaki kosinüs benzerliği hesaplanarak yüzdelik bir skor elde edilir.
+        Kullanıcı dostu arayüz; React, TypeScript ve etkileşimli HTML5 Canvas ile geliştirilmiş olup,
+        hızlı ve güvenilir arka plan işlemleri Python FastAPI teknolojileriyle desteklenmektedir.
+      </p>
+
+      <button
+        className="scroll-to-top-btn"
+        onClick={() => document.querySelector('.app-layout')?.scrollTo({ top: 0, behavior: 'smooth' })}
+      >
+        <ArrowUp size={18} /> Başa Dön
+      </button>
+    </>
+  );
+
   if (isInitialLoading || showInitialError) {
     return (
       <div className="app-layout" style={{ overflowY: 'auto' }}>
         <StructuredData data={homepageSchemas} />
         <header className="app-header">
+          <div className="app-header__left-actions" />
           <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
           <h1 className="app-header__title">KelimeLink</h1>
           <span className="app-header__subtitle">Kelime Bağlantı Bulmacası</span>
+          <div className="app-header__actions">
+            <button
+              className="app-header__action-btn"
+              onClick={toggleDarkMode}
+              aria-label="Karanlık Modu Değiştir"
+              title="Karanlık Modu Değiştir"
+            >
+              {isDark ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+          </div>
         </header>
 
         <main className="landing-main">
@@ -212,65 +299,10 @@ export default function App() {
           </div>
 
           <article className="seo-homepage-content">
-            <h2>KelimeLink Nedir?</h2>
-            <p>
-              KelimeLink, Türkçe'nin zengin kelime dünyasında anlamsal köprüler kurduğunuz
-              eşsiz bir kelime bulmacasıdır. Her bulmacada size verilen iki kelime arasında
-              anlam bağlantıları kurarak bir yol oluşturmanız gerekir. Yapay zeka tabanlı
-              doğal dil işleme (NLP) teknolojisi sayesinde, kelimeler arasındaki anlamsal
-              benzerlik gerçek zamanlı olarak ölçülür.
-            </p>
-
-            <h2>Nasıl Oynanır?</h2>
-            <p>
-              Oyun, kelimeler arasındaki anlamsal benzerliği ölçmek için ConceptNet Numberbatch
-              dil modelini kullanır. Eklediğiniz her kelime, tahtadaki tüm kelimelerle karşılaştırılır.
-              İki kelime arasındaki benzerlik skoru %26 veya üzerindeyse, aralarında otomatik olarak
-              bir bağlantı oluşur. Başlangıç kelimesinden hedef kelimeye kesintisiz bir yol
-              oluşturduğunuzda bulmacayı çözmüş olursunuz.
-            </p>
-
-            <h2>Oyun Modları</h2>
-            <h3>🗓️ Günlük Bulmaca</h3>
-            <p>
-              Her gün UTC gece yarısında yeni bir kelime çifti yayınlanır. Tüm oyuncular aynı
-              bulmacayı çözer ve en az tahminle çözen oyuncu günün rekortmeni olur.
-            </p>
-            <h3>⚔️ Pratik Modu</h3>
-            <p>
-              Sınırsız sayıda rastgele kelime çifti ile antrenman yapın. İpucu alma özelliği
-              aktiftir — zor durumda kaldığınızda sistemden yardım isteyebilirsiniz.
-            </p>
-            <h3>👥 VS Modu</h3>
-            <p>
-              Arkadaşlarınızla gerçek zamanlı olarak aynı bulmacayı çözmeye yarışın! Bir oda
-              oluşturarak veya katılarak, aynı kelime çiftini kim daha az tahminle çözerse o kazanır.
-            </p>
-
-            <h2>Arkasındaki Teknoloji</h2>
-            <p>
-              KelimeLink, ConceptNet Numberbatch kelime gömme modelini kullanarak kelimelerin
-              anlamsal ilişkilerini 300 boyutlu vektörlerle temsil eder. İki kelime arasındaki
-              kosinüs benzerliği hesaplanarak yüzdelik bir skor elde edilir. Bu sistem;
-              React, TypeScript, HTML5 Canvas ve Python FastAPI teknolojileri üzerine kuruludur.
-            </p>
-
-            <div className="seo-footer-links">
-              <a href="/nasil-oynanir">Detaylı oyun rehberi için tıklayın</a>
-              <a href="/hakkinda">Hakkında daha fazla bilgi</a>
-              <a href="/blog/konseptnet-nasil-calisir">ConceptNet Nasıl Çalışır?</a>
-              <a href="/blog/kelime-oyunlarinda-nlp">Kelime Oyunlarında NLP</a>
-              <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
-              <a href="/kullanim-kosullari">Kullanım Şartları</a>
-              <a href="mailto:[EMAIL_ADDRESS]">İletişim</a>
-              {/* newline respecting flex */}
-              <div style={{ width: '100%' }}></div>
-              <div className="app-footer__copyright">
-                © 2026 KelimeLink. Tüm hakları saklıdır.
-              </div>
-            </div>
+            {seoText}
           </article>
         </main>
+        <Footer />
       </div>
     );
   }
@@ -503,23 +535,11 @@ export default function App() {
 
 
 
-      <footer className="app-footer">
-        <div className="app-footer__content">
-          <div className="app-footer__links">
-            <a href="/nasil-oynanir">Nasıl Oynanır?</a>
-            <a href="/hakkinda">Hakkında</a>
-            <a href="/arsiv">Bulmaca Arşivi</a>
-            <a href="/blog/konseptnet-nasil-calisir">ConceptNet Nasıl Çalışır?</a>
-            <a href="/blog/kelime-oyunlarinda-nlp">Kelime Oyunlarında NLP</a>
-            <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
-            <a href="/kullanim-kosullari">Kullanım Şartları</a>
-            <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
-          </div>
-          <div className="app-footer__copyright">
-            © 2026 KelimeLink. Tüm hakları saklıdır.
-          </div>
-        </div>
-      </footer>
+      <article className="seo-homepage-content" style={{ paddingBottom: '24px' }}>
+        {seoText}
+      </article>
+
+      <Footer />
     </div>
   );
 }
