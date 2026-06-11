@@ -1,16 +1,52 @@
-import { useEffect } from 'react';
 import ContentLayout from '../components/ContentLayout';
+import { createArticleSchema, createFAQSchema } from '../components/StructuredData';
+import { useMemo } from 'react';
 
 export default function HowToPlay() {
-  useEffect(() => {
-    document.title = 'Nasıl Oynanır? — KelimeLink Oyun Rehberi';
-    document.querySelector('meta[name="description"]')?.setAttribute('content',
-      'KelimeLink nasıl oynanır? Detaylı oyun rehberi, ipuçları, strateji önerileri ve oyun modlarının açıklamaları. Kelime bağlantı bulmacasında ustalaşın!'
-    );
-  }, []);
+  const schemas = useMemo(() => [
+    createArticleSchema({
+      title: 'KelimeLink Nasıl Oynanır? — Detaylı Oyun Rehberi',
+      description: 'KelimeLink nasıl oynanır? Detaylı oyun rehberi, ipuçları, strateji önerileri ve oyun modlarının açıklamaları.',
+      path: '/nasil-oynanir',
+      datePublished: '2026-06-02',
+      dateModified: '2026-06-02',
+    }),
+    createFAQSchema([
+      {
+        question: 'Benzerlik skoru nasıl hesaplanıyor?',
+        answer: 'KelimeLink, kelimeleri çok boyutlu vektörler olarak temsil eden bir dil modeli kullanır. İki kelimenin vektörleri arasındaki kosinüs benzerliği hesaplanarak yüzdelik bir skor elde edilir. Bu model, ConceptNet Numberbatch adlı açık kaynaklı bir bilgi tabanı üzerine kuruludur.',
+      },
+      {
+        question: 'Neden bazı kelimeler tanınmıyor?',
+        answer: 'KelimeLink\'in sözlüğü, Türkçe\'nin en yaygın kullanılan kelimelerini kapsar. Çok nadir kullanılan kelimeler veya birden fazla ek getirerek türetilmiş sözcükler sözlükte bulunmayabilir.',
+      },
+      {
+        question: 'Beklediğim bağlantı neden oluşmadı?',
+        answer: 'Anlamsal benzerlik modeli, insan sezgisinden farklı sonuçlar üretebilir. Sizin için açıkça ilişkili olan iki kelime, modelin eğitim verisinde birlikte sık kullanılmamış olabilir. Böyle durumlarda bağlantı önerisi gönderebilirsiniz.',
+      },
+      {
+        question: 'İstatistiklerim nerede saklanıyor?',
+        answer: 'Oyun istatistikleriniz (çözülen bulmaca sayısı, ortalama tahmin sayısı, seri kayıtları) tarayıcınızın yerel depolama alanında (localStorage) tutulur. Bu veriler cihazınıza özeldir ve sunucularımıza kişisel bilgi olarak gönderilmez.',
+      },
+    ]),
+  ], []);
 
   return (
-    <ContentLayout title="Nasıl Oynanır?">
+    <ContentLayout
+      title="Nasıl Oynanır?"
+      seo={{
+        title: 'Nasıl Oynanır? — KelimeLink Oyun Rehberi',
+        description: 'KelimeLink nasıl oynanır? Detaylı oyun rehberi, ipuçları, strateji önerileri ve oyun modlarının açıklamaları. Kelime bağlantı bulmacasında ustalaşın!',
+        path: '/nasil-oynanir',
+        ogTitle: 'KelimeLink Nasıl Oynanır? — Detaylı Rehber',
+        ogDescription: 'Kelime bağlantı bulmacasının kuralları, oyun modları, strateji ipuçları ve sık sorulan sorular.',
+      }}
+      structuredData={schemas}
+      breadcrumbs={[
+        { name: 'Ana Sayfa', path: '/' },
+        { name: 'Nasıl Oynanır?', path: '/nasil-oynanir' },
+      ]}
+    >
       <h1>KelimeLink Nasıl Oynanır? — Detaylı Oyun Rehberi</h1>
 
       <p>

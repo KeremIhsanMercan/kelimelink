@@ -1,17 +1,17 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { 
-  fetchDailyPuzzle, fetchPracticePuzzle, submitGuess, 
-  fetchSimilarities, recordSolve, fetchStats, rebuildBoard, 
-  type SimilarityResult 
+import {
+  fetchDailyPuzzle, fetchPracticePuzzle, submitGuess,
+  fetchSimilarities, recordSolve, fetchStats, rebuildBoard,
+  type SimilarityResult
 } from '../services/api';
 import { useLocalStorage } from './useLocalStorage';
-import type { 
-  GraphNode, GraphLink 
+import type {
+  GraphNode, GraphLink
 } from '../utils/graphUtils';
 export type { GraphNode, GraphLink };
-import { 
-  updateChainSides, 
-  bfs, buildAdjacency, findShortestPath 
+import {
+  updateChainSides,
+  bfs, buildAdjacency, findShortestPath
 } from '../utils/graphUtils';
 
 
@@ -107,11 +107,11 @@ function buildGameState({
    ============================================ */
 
 export function useGameState() {
-  const { 
-    stats, practiceStats, vsStats, username, setUsername, 
-    loadGameState, saveGameState, loadPracticeGameState, 
-    savePracticeGameState, clearPracticeGameState, 
-    recordWin, recordPracticeWin, recordVsGame 
+  const {
+    stats, practiceStats, vsStats, username, setUsername,
+    loadGameState, saveGameState, loadPracticeGameState,
+    savePracticeGameState, clearPracticeGameState,
+    recordWin, recordPracticeWin, recordVsGame
   } = useLocalStorage();
 
   const hasRecordedWin = useRef(false);
@@ -250,7 +250,7 @@ export function useGameState() {
     initDailyGame().then(nextState => {
       if (!cancelled) setState(nextState);
     }).catch(() => {
-      if (!cancelled) setState(prev => ({ ...prev, isLoading: false, error: 'Bulmaca yüklenemedi.' }));
+      if (!cancelled) setState(prev => ({ ...prev, isLoading: false, error: 'Bulmaca yüklenemedi. Sunucu güncelleniyor...' }));
     });
     return () => { cancelled = true; };
   }, [initDailyGame]);
@@ -281,12 +281,12 @@ export function useGameState() {
     setGameMode('vs');
     allSimilaritiesRef.current = new Map();
     hasRecordedWin.current = false;
-    
+
     let bannedWords: string[] | null = null;
     if (bannedWordsStr) {
       bannedWords = bannedWordsStr.toLowerCase().split(/\s+/).filter(Boolean);
     }
-    
+
     setState(buildGameState({ puzzleDate: '', wordA, wordB, bannedWords }));
   }, []);
 
@@ -350,7 +350,7 @@ export function useGameState() {
           const newLinks = [...prev.links, ...result.links.map(l => ({ source: l.word1, target: l.word2, similarity: l.similarity }))];
           const newGuessCount = prev.guessCount + 1;
           const updatedNodes = updateChainSides(newNodes, newLinks, prev.wordA, prev.wordB);
-          
+
           const adjForPath = buildAdjacency(newLinks);
           const won = bfs(prev.wordA, adjForPath).has(prev.wordB);
 

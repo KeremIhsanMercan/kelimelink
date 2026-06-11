@@ -1,16 +1,33 @@
-import { useEffect } from 'react';
 import ContentLayout from '../../components/ContentLayout';
+import { createArticleSchema } from '../../components/StructuredData';
+import { useMemo } from 'react';
 
 export default function BlogConceptNet() {
-  useEffect(() => {
-    document.title = 'ConceptNet Numberbatch Nasıl Çalışır? — KelimeLink Blog';
-    document.querySelector('meta[name="description"]')?.setAttribute('content',
-      'ConceptNet Numberbatch nedir ve KelimeLink\'te kelime benzerlikleri nasıl hesaplanır? Kelime gömme vektörleri, kosinüs benzerliği ve semantik anlam hakkında teknik bir makale.'
-    );
-  }, []);
+  const articleSchema = useMemo(() => createArticleSchema({
+    title: 'ConceptNet Numberbatch: KelimeLink\'in Arkasındaki Bilgi Tabanı',
+    description: 'ConceptNet Numberbatch nedir ve KelimeLink\'te kelime benzerlikleri nasıl hesaplanır? Kelime gömme vektörleri, kosinüs benzerliği ve semantik anlam hakkında teknik bir makale.',
+    path: '/blog/konseptnet-nasil-calisir',
+    datePublished: '2026-06-02',
+    dateModified: '2026-06-02',
+  }), []);
 
   return (
-    <ContentLayout title="Blog">
+    <ContentLayout
+      title="Blog"
+      seo={{
+        title: 'ConceptNet Numberbatch Nasıl Çalışır? — KelimeLink Blog',
+        description: 'ConceptNet Numberbatch nedir ve KelimeLink\'te kelime benzerlikleri nasıl hesaplanır? Kelime gömme vektörleri, kosinüs benzerliği ve semantik anlam hakkında teknik bir makale.',
+        path: '/blog/konseptnet-nasil-calisir',
+        ogTitle: 'ConceptNet Numberbatch Nasıl Çalışır?',
+        ogDescription: 'KelimeLink\'in arkasındaki kelime gömme teknolojisi, kosinüs benzerliği ve semantik analiz hakkında detaylı teknik makale.',
+      }}
+      structuredData={articleSchema}
+      breadcrumbs={[
+        { name: 'Ana Sayfa', path: '/' },
+        { name: 'Blog', path: '/blog/konseptnet-nasil-calisir' },
+        { name: 'ConceptNet Nasıl Çalışır?', path: '/blog/konseptnet-nasil-calisir' },
+      ]}
+    >
       <h1>ConceptNet Numberbatch: KelimeLink'in Arkasındaki Bilgi Tabanı</h1>
       <p className="content-page__date">Yayın Tarihi: 2 Haziran 2026</p>
 

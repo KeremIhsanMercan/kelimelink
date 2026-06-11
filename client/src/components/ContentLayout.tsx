@@ -1,18 +1,54 @@
 import { Moon, Sun, ArrowLeft } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useRenderReady } from '../hooks/useRenderReady';
+import { useSEO } from '../hooks/useSEO';
+import StructuredData, { createBreadcrumbSchema } from './StructuredData';
+import { useMemo } from 'react';
 
 interface ContentLayoutProps {
   children: React.ReactNode;
   title?: string;
+  seo: {
+    title: string;
+    description: string;
+    path: string;
+    ogTitle?: string;
+    ogDescription?: string;
+  };
+  structuredData?: Record<string, unknown> | Record<string, unknown>[];
+  breadcrumbs?: { name: string; path: string }[];
 }
 
-export default function ContentLayout({ children, title }: ContentLayoutProps) {
+export default function ContentLayout({
+  children,
+  title,
+  seo,
+  structuredData,
+  breadcrumbs,
+}: ContentLayoutProps) {
   const { isDark, toggleDarkMode } = useDarkMode();
   useRenderReady(); // Fire prerender event after paint
+  useSEO(seo);
+
+  // Combine structured data with breadcrumbs
+  const allSchemas = useMemo(() => {
+    const schemas: Record<string, unknown>[] = [];
+    if (breadcrumbs && breadcrumbs.length > 0) {
+      schemas.push(createBreadcrumbSchema(breadcrumbs));
+    }
+    if (structuredData) {
+      if (Array.isArray(structuredData)) {
+        schemas.push(...structuredData);
+      } else {
+        schemas.push(structuredData);
+      }
+    }
+    return schemas.length > 0 ? schemas : null;
+  }, [structuredData, breadcrumbs]);
 
   return (
     <div className="app-layout" style={{ overflowY: 'auto' }}>
+      {allSchemas && <StructuredData data={allSchemas} />}
       <header className="app-header">
         <div className="app-header__left-actions">
           <a href="/" className="app-header__action-btn" title="Ana Sayfaya Dön">
@@ -60,3 +96,4 @@ export default function ContentLayout({ children, title }: ContentLayoutProps) {
     </div>
   );
 }
+

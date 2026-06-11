@@ -1,16 +1,21 @@
-import { useEffect } from 'react';
 import ContentLayout from '../components/ContentLayout';
 
 export default function KullanimKosullari() {
-  useEffect(() => {
-    document.title = 'Kullanım Şartları — KelimeLink';
-    document.querySelector('meta[name="description"]')?.setAttribute('content',
-      'KelimeLink Kullanım Şartları. Oyunun kuralları, fikri mülkiyet hakları ve hizmet sınırlandırmaları hakkında genel bilgilendirme.'
-    );
-  }, []);
-
   return (
-    <ContentLayout title="Kullanım Şartları">
+    <ContentLayout
+      title="Kullanım Şartları"
+      seo={{
+        title: 'Kullanım Şartları — KelimeLink',
+        description: 'KelimeLink Kullanım Şartları. Oyunun kuralları, fikri mülkiyet hakları ve hizmet sınırlandırmaları hakkında genel bilgilendirme.',
+        path: '/kullanim-kosullari',
+        ogTitle: 'KelimeLink Kullanım Şartları',
+        ogDescription: 'KelimeLink oyununun kullanım şartları, kuralları ve hizmet sınırlandırmaları.',
+      }}
+      breadcrumbs={[
+        { name: 'Ana Sayfa', path: '/' },
+        { name: 'Kullanım Şartları', path: '/kullanim-kosullari' },
+      ]}
+    >
       <h1>Kullanım Şartları</h1>
       <p className="content-page__date">Son Güncelleme: 2 Haziran 2026</p>
 

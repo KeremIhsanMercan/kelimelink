@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useVsMode } from './hooks/useVsMode';
 import { useHydration } from './hooks/useHydration';
 import { useRenderReady } from './hooks/useRenderReady';
+import { useSEO } from './hooks/useSEO';
 import GraphCanvas from './components/GraphCanvas';
 import Sidebar from './components/Sidebar';
 import WinBanner from './components/WinBanner';
@@ -17,6 +18,11 @@ import VsRoomModal from './components/VsRoomModal';
 import VsGameOverModal from './components/VsGameOverModal';
 import VsRematchModal from './components/VsRematchModal';
 import CookieBanner from './components/CookieBanner';
+import StructuredData, {
+  createWebSiteSchema,
+  createWebApplicationSchema,
+  createBreadcrumbSchema,
+} from './components/StructuredData';
 import './index.css';
 
 export default function App() {
@@ -71,6 +77,13 @@ export default function App() {
   const { isDark, toggleDarkMode } = useDarkMode();
   const [showProfile, setShowProfile] = useState(false);
   const [showInfo, setShowInfo] = useState(() => {
+    // Prevent the modal from showing automatically for crawlers to avoid interstitial penalties
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent.toLowerCase();
+      const isCrawler = /googlebot|bingbot|yandex|baiduspider|slurp|headlesschrome/.test(ua) || (window as any).__PRERENDER_INJECTED !== undefined;
+      if (isCrawler) return false;
+    }
+
     const hasVisited = localStorage.getItem('kelimelink_visited');
     if (!hasVisited) {
       localStorage.setItem('kelimelink_visited', 'true');
@@ -158,47 +171,112 @@ export default function App() {
     }
   };
 
-  if (!isHydrated || isLoading) {
+  // SEO meta tags for the homepage — captured by prerenderer
+  useSEO({
+    title: 'KelimeLink — Türkçe Kelime Bağlantı Bulmacası',
+    description:
+      'KelimeLink - Her gün yeni bir Türkçe kelime bağlantı bulmacası. İki uzak kelimeyi anlamsal köprüler kurarak birbirine bağlayın. Kelime dağarcığınızı ve mantığınızı test edin!',
+    path: '/',
+    ogTitle: 'KelimeLink — Türkçe Kelime Bağlantı Bulmacası',
+    ogDescription:
+      'İki kelimeyi anlamsal bağlantılarla birbirine bağla! Her gün yeni bir meydan okuma.',
+  });
+
+  // Structured data schemas — memoized to avoid re-creation on each render
+  const homepageSchemas = useMemo(
+    () => [
+      createWebSiteSchema(),
+      createWebApplicationSchema(),
+      createBreadcrumbSchema([{ name: 'Ana Sayfa', path: '/' }]),
+    ],
+    []
+  );
+
+  const isInitialLoading = !isHydrated || isLoading;
+  const showInitialError = error && nodes.length === 0 && !isLoading;
+
+  if (isInitialLoading || showInitialError) {
     return (
-      <div className="app-layout">
+      <div className="app-layout" style={{ overflowY: 'auto' }}>
+        <StructuredData data={homepageSchemas} />
         <header className="app-header">
           <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
           <h1 className="app-header__title">KelimeLink</h1>
           <span className="app-header__subtitle">Kelime Bağlantı Bulmacası</span>
         </header>
-        <main className="app-main" style={{ justifyContent: 'center', alignItems: 'center' }}>
-          <div className="loading-screen" style={{ height: 'auto' }}>
-            <div className="loading-spinner" />
-            <p className="loading-text">Yükleniyor...</p>
+
+        <main className="landing-main">
+          <div className="landing-hero">
+            {isInitialLoading ? (
+              <div className="loading-state">
+                <div className="loading-spinner" />
+                <p className="loading-text">Yükleniyor...</p>
+                <p className="loading-subtext">Bağlantılar kuruluyor</p>
+              </div>
+            ) : (
+              <div className="error-state">
+                <div className="error-icon">🔌</div>
+                <h2>Bağlantı Kurulamadı</h2>
+                <p>{error}</p>
+                <button onClick={() => window.location.reload()}>
+                  Tekrar Dene
+                </button>
+              </div>
+            )}
           </div>
-        </main>
-        <footer className="app-footer">
-          <div className="app-footer__content">
-            <div className="app-footer__copyright">
-              © 2026 KelimeLink. Tüm hakları saklıdır.
-            </div>
-            <div className="app-footer__links">
-              <a href="/nasil-oynanir">Nasıl Oynanır?</a>
-              <a href="/hakkinda">Hakkında</a>
-              <a href="/arsiv">Bulmaca Arşivi</a>
+
+          <article className="seo-homepage-content">
+            <h2>KelimeLink Nedir?</h2>
+            <p>
+              KelimeLink, Türkçe'nin zengin kelime dünyasında anlamsal köprüler kurduğunuz
+              eşsiz bir kelime bulmacasıdır. Her bulmacada size verilen iki kelime arasında
+              anlam bağlantıları kurarak bir yol oluşturmanız gerekir. Yapay zeka tabanlı
+              doğal dil işleme (NLP) teknolojisi sayesinde, kelimeler arasındaki anlamsal
+              benzerlik gerçek zamanlı olarak ölçülür.
+            </p>
+
+            <h2>Nasıl Oynanır?</h2>
+            <p>
+              Oyun, kelimeler arasındaki anlamsal benzerliği ölçmek için ConceptNet Numberbatch
+              dil modelini kullanır. Eklediğiniz her kelime, tahtadaki tüm kelimelerle karşılaştırılır.
+              İki kelime arasındaki benzerlik skoru %26 veya üzerindeyse, aralarında otomatik olarak
+              bir bağlantı oluşur. Başlangıç kelimesinden hedef kelimeye kesintisiz bir yol
+              oluşturduğunuzda bulmacayı çözmüş olursunuz.
+            </p>
+
+            <h2>Oyun Modları</h2>
+            <h3>🗓️ Günlük Bulmaca</h3>
+            <p>
+              Her gün UTC gece yarısında yeni bir kelime çifti yayınlanır. Tüm oyuncular aynı
+              bulmacayı çözer ve en az tahminle çözen oyuncu günün rekortmeni olur.
+            </p>
+            <h3>⚔️ Pratik Modu</h3>
+            <p>
+              Sınırsız sayıda rastgele kelime çifti ile antrenman yapın. İpucu alma özelliği
+              aktiftir — zor durumda kaldığınızda sistemden yardım isteyebilirsiniz.
+            </p>
+            <h3>👥 VS Modu</h3>
+            <p>
+              Arkadaşlarınızla gerçek zamanlı olarak aynı bulmacayı çözmeye yarışın! Bir oda
+              oluşturarak veya katılarak, aynı kelime çiftini kim daha az tahminle çözerse o kazanır.
+            </p>
+
+            <h2>Arkasındaki Teknoloji</h2>
+            <p>
+              KelimeLink, ConceptNet Numberbatch kelime gömme modelini kullanarak kelimelerin
+              anlamsal ilişkilerini 300 boyutlu vektörlerle temsil eder. İki kelime arasındaki
+              kosinüs benzerliği hesaplanarak yüzdelik bir skor elde edilir. Bu sistem;
+              React, TypeScript, HTML5 Canvas ve Python FastAPI teknolojileri üzerine kuruludur.
+            </p>
+
+            <div className="seo-footer-links">
+              <a href="/nasil-oynanir">Detaylı oyun rehberi için tıklayın</a>
+              <a href="/hakkinda">Hakkında daha fazla bilgi</a>
               <a href="/blog/konseptnet-nasil-calisir">ConceptNet Nasıl Çalışır?</a>
               <a href="/blog/kelime-oyunlarinda-nlp">Kelime Oyunlarında NLP</a>
-              <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
-              <a href="/kullanim-kosullari">Kullanım Şartları</a>
-              <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
             </div>
-          </div>
-        </footer>
-      </div>
-    );
-  }
-
-  if (error && nodes.length === 0) {
-    return (
-      <div className="loading-screen">
-        <p className="loading-text" style={{ color: '#dc2626' }}>
-          {error}
-        </p>
+          </article>
+        </main>
       </div>
     );
   }

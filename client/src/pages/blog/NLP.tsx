@@ -1,16 +1,33 @@
-import { useEffect } from 'react';
 import ContentLayout from '../../components/ContentLayout';
+import { createArticleSchema } from '../../components/StructuredData';
+import { useMemo } from 'react';
 
 export default function BlogNLP() {
-  useEffect(() => {
-    document.title = 'Kelime Oyunlarında Doğal Dil İşleme (NLP) — KelimeLink Blog';
-    document.querySelector('meta[name="description"]')?.setAttribute('content',
-      'Yapay zeka ve doğal dil işleme (NLP) teknolojileri kelime oyunlarını nasıl dönüştürüyor? Word2Vec, transformer modelleri ve semantik analiz hakkında kapsamlı bir rehber.'
-    );
-  }, []);
+  const articleSchema = useMemo(() => createArticleSchema({
+    title: 'Kelime Oyunlarında Doğal Dil İşleme: Yapay Zeka Dilin İçine Nasıl Bakıyor?',
+    description: 'Yapay zeka ve doğal dil işleme (NLP) teknolojileri kelime oyunlarını nasıl dönüştürüyor? Word2Vec, transformer modelleri ve semantik analiz hakkında kapsamlı bir rehber.',
+    path: '/blog/kelime-oyunlarinda-nlp',
+    datePublished: '2026-06-02',
+    dateModified: '2026-06-02',
+  }), []);
 
   return (
-    <ContentLayout title="Blog">
+    <ContentLayout
+      title="Blog"
+      seo={{
+        title: 'Kelime Oyunlarında Doğal Dil İşleme (NLP) — KelimeLink Blog',
+        description: 'Yapay zeka ve doğal dil işleme (NLP) teknolojileri kelime oyunlarını nasıl dönüştürüyor? Word2Vec, transformer modelleri ve semantik analiz hakkında kapsamlı bir rehber.',
+        path: '/blog/kelime-oyunlarinda-nlp',
+        ogTitle: 'Kelime Oyunlarında Doğal Dil İşleme (NLP)',
+        ogDescription: 'NLP teknolojileri kelime oyunlarını nasıl dönüştürüyor? Word2Vec, GloVe, FastText ve Transformer modelleri hakkında kapsamlı rehber.',
+      }}
+      structuredData={articleSchema}
+      breadcrumbs={[
+        { name: 'Ana Sayfa', path: '/' },
+        { name: 'Blog', path: '/blog/kelime-oyunlarinda-nlp' },
+        { name: 'Kelime Oyunlarında NLP', path: '/blog/kelime-oyunlarinda-nlp' },
+      ]}
+    >
       <h1>Kelime Oyunlarında Doğal Dil İşleme: Yapay Zeka Dilin İçine Nasıl Bakıyor?</h1>
       <p className="content-page__date">Yayın Tarihi: 2 Haziran 2026</p>
 

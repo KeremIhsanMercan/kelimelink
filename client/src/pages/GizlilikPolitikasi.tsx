@@ -1,16 +1,21 @@
-import { useEffect } from 'react';
 import ContentLayout from '../components/ContentLayout';
 
 export default function GizlilikPolitikasi() {
-  useEffect(() => {
-    document.title = 'Gizlilik Politikası — KelimeLink';
-    document.querySelector('meta[name="description"]')?.setAttribute('content',
-      'KelimeLink Gizlilik Politikası. Çerez kullanımı, kişisel veriler, Google AdSense politikaları ve yerel veri depolama hakkında detaylı bilgilendirme.'
-    );
-  }, []);
-
   return (
-    <ContentLayout title="Gizlilik Politikası">
+    <ContentLayout
+      title="Gizlilik Politikası"
+      seo={{
+        title: 'Gizlilik Politikası — KelimeLink',
+        description: 'KelimeLink Gizlilik Politikası. Çerez kullanımı, kişisel veriler, Google AdSense politikaları ve yerel veri depolama hakkında detaylı bilgilendirme.',
+        path: '/gizlilik-politikasi',
+        ogTitle: 'KelimeLink Gizlilik Politikası',
+        ogDescription: 'KelimeLink\'in çerez kullanımı, kişisel veri politikaları ve yerel depolama hakkında bilgi.',
+      }}
+      breadcrumbs={[
+        { name: 'Ana Sayfa', path: '/' },
+        { name: 'Gizlilik Politikası', path: '/gizlilik-politikasi' },
+      ]}
+    >
       <h1>Gizlilik Politikası</h1>
       <p className="content-page__date">Son Güncelleme: 2 Haziran 2026</p>
 

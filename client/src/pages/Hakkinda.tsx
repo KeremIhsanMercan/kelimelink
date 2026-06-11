@@ -1,16 +1,32 @@
-import { useEffect } from 'react';
 import ContentLayout from '../components/ContentLayout';
+import { createArticleSchema } from '../components/StructuredData';
+import { useMemo } from 'react';
 
 export default function About() {
-  useEffect(() => {
-    document.title = 'Hakkında — KelimeLink Hikayesi ve Ekip';
-    document.querySelector('meta[name="description"]')?.setAttribute('content',
-      'KelimeLink\'in hikayesi, arkasındaki teknoloji ve ekip. Türkçe kelime bulmacası nasıl doğdu, hangi NLP teknolojileri kullanılıyor?'
-    );
-  }, []);
+  const articleSchema = useMemo(() => createArticleSchema({
+    title: 'KelimeLink Hakkında — Hikaye ve Teknoloji',
+    description: 'KelimeLink\'in hikayesi, arkasındaki teknoloji ve ekip. Türkçe kelime bulmacası nasıl doğdu, hangi NLP teknolojileri kullanılıyor?',
+    path: '/hakkinda',
+    datePublished: '2026-06-02',
+    dateModified: '2026-06-02',
+  }), []);
 
   return (
-    <ContentLayout title="Hakkında">
+    <ContentLayout
+      title="Hakkında"
+      seo={{
+        title: 'Hakkında — KelimeLink Hikayesi ve Ekip',
+        description: 'KelimeLink\'in hikayesi, arkasındaki teknoloji ve ekip. Türkçe kelime bulmacası nasıl doğdu, hangi NLP teknolojileri kullanılıyor?',
+        path: '/hakkinda',
+        ogTitle: 'KelimeLink Hakkında — Hikaye, Teknoloji ve Ekip',
+        ogDescription: 'KelimeLink nasıl doğdu? Arkasındaki NLP teknolojisi ve ConceptNet Numberbatch hakkında bilgi edinin.',
+      }}
+      structuredData={articleSchema}
+      breadcrumbs={[
+        { name: 'Ana Sayfa', path: '/' },
+        { name: 'Hakkında', path: '/hakkinda' },
+      ]}
+    >
       <h1>KelimeLink Hakkında</h1>
 
       <h2>Proje Hikayesi</h2>

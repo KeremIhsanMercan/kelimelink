@@ -2397,3 +2397,180 @@ html.dark {
     font-size: 0.9rem;
     color: var(--color-text-secondary);
 }
+
+/* ============================================
+   SEO Homepage Content & Landing Page (Loading/Error)
+   ============================================ */
+
+.landing-main {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - var(--header-height));
+    width: 100%;
+}
+
+.landing-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px 60px;
+    text-align: center;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border-light);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+html.dark .landing-hero {
+    background: var(--color-bg);
+}
+
+.landing-hero .loading-state {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.landing-hero .loading-spinner {
+    width: 56px;
+    height: 56px;
+    border-width: 4px;
+    margin: 0 auto 24px;
+    border-top-color: var(--color-word-both);
+}
+
+.landing-hero .loading-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 8px;
+}
+
+.landing-hero .loading-subtext {
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+}
+
+.error-state {
+    max-width: 480px;
+    margin: 0 auto;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.error-state .error-icon {
+    font-size: 3.5rem;
+    margin-bottom: 20px;
+}
+
+.error-state h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: 12px;
+}
+
+.error-state p {
+    font-size: 1.05rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 28px;
+    line-height: 1.5;
+}
+
+.error-state button {
+    padding: 12px 28px;
+    background: var(--color-word-both);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: 0 4px 12px rgba(165, 121, 241, 0.25);
+}
+
+.error-state button:hover {
+    filter: brightness(0.9);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(165, 121, 241, 0.35);
+}
+
+.seo-homepage-content {
+    max-width: 720px;
+    margin: 48px auto;
+    padding: 0 32px 64px;
+    text-align: left;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+    font-size: 1rem;
+}
+
+.seo-homepage-content h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 36px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--color-border-light);
+}
+
+.seo-homepage-content h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 24px 0 8px;
+}
+
+.seo-homepage-content p {
+    margin-bottom: 16px;
+}
+
+.seo-homepage-content a {
+    color: var(--color-word-both);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.seo-homepage-content a:hover {
+    text-decoration: underline;
+}
+
+.seo-footer-links {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--color-border-light);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+}
+
+.seo-footer-links a {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+/* Archive page SEO intro */
+.archive-seo-intro {
+    max-width: 680px;
+    margin: 0 auto 24px;
+    padding: 0 16px;
+    text-align: left;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+}
+
+.archive-seo-intro h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 16px 0 6px;
+}
+
+.archive-seo-intro a {
+    color: var(--color-word-a);
+    text-decoration: none;
+}
+
+.archive-seo-intro a:hover {
+    text-decoration: underline;
+}
