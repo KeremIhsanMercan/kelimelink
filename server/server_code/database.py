@@ -144,6 +144,18 @@ def init_tables():
                     banned_words TEXT,
                     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS leaderboard_streaks (
+                    device_id TEXT PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    max_streak INT NOT NULL DEFAULT 0
+                );
+
+                CREATE TABLE IF NOT EXISTS leaderboard_total_wins (
+                    device_id TEXT PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    total_wins INT NOT NULL DEFAULT 0
+                );
             """)
     except Exception as e:
         print(f"[DB] Tablolar oluşturulurken hata (muhtemelen paralel işlem): {e}")
@@ -457,3 +469,72 @@ def db_cleanup_vs_rooms(hours: int = 2):
 def db_notify_room_update(room_code: str):
     with get_cursor() as cur:
         cur.execute("SELECT pg_notify('vs_room_updates', %s)", (room_code,))
+
+
+# --- Leaderboard Functions ---
+
+def upsert_leaderboard_streak(device_id: str, username: str, max_streak: int):
+    """Kullanıcının en uzun streak değerini günceller (INSERT ON CONFLICT DO UPDATE)."""
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO leaderboard_streaks (device_id, username, max_streak)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (device_id) DO UPDATE SET
+                username = EXCLUDED.username,
+                max_streak = GREATEST(leaderboard_streaks.max_streak, EXCLUDED.max_streak)
+            """,
+            (device_id, username, max_streak),
+        )
+
+
+def upsert_leaderboard_total_wins(device_id: str, username: str, total_wins: int):
+    """Kullanıcının toplam kazanma sayısını günceller (INSERT ON CONFLICT DO UPDATE)."""
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO leaderboard_total_wins (device_id, username, total_wins)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (device_id) DO UPDATE SET
+                username = EXCLUDED.username,
+                total_wins = GREATEST(leaderboard_total_wins.total_wins, EXCLUDED.total_wins)
+            """,
+            (device_id, username, total_wins),
+        )
+
+
+def get_leaderboard() -> dict:
+    """Tüm liderlik tablosu verilerini döndürür (her kategori top 5)."""
+    with get_cursor() as cur:
+        # Top 5 en uzun streak
+        cur.execute(
+            "SELECT username, max_streak FROM leaderboard_streaks ORDER BY max_streak DESC LIMIT 5"
+        )
+        streaks = [{"username": r["username"], "value": r["max_streak"]} for r in cur.fetchall()]
+
+        # Top 5 en çok toplam kazanan
+        cur.execute(
+            "SELECT username, total_wins FROM leaderboard_total_wins ORDER BY total_wins DESC LIMIT 5"
+        )
+        total_wins = [{"username": r["username"], "value": r["total_wins"]} for r in cur.fetchall()]
+
+        # Top 5 en çok gün şampiyonu (daily modda min_guesses_username)
+        cur.execute(
+            """
+            SELECT min_guesses_username AS username, COUNT(*) AS champion_count
+            FROM global_stats
+            WHERE gamemode = 'daily'
+              AND min_guesses_username IS NOT NULL
+              AND min_guesses_username != ''
+            GROUP BY min_guesses_username
+            ORDER BY champion_count DESC
+            LIMIT 5
+            """
+        )
+        champions = [{"username": r["username"], "value": r["champion_count"]} for r in cur.fetchall()]
+
+    return {
+        "streaks": streaks,
+        "champions": champions,
+        "total_wins": total_wins,
+    }

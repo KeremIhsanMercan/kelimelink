@@ -72,8 +72,24 @@ export async function fetchSimilarities(word: string, boardWords: string[], user
   return res.data;
 }
 
-export async function recordSolve(guessCount: number, path: string[] | null, gamemode: string = 'daily', username: string = ''): Promise<void> {
-  await api.post('/api/solve', { guess_count: guessCount, path: path, gamemode, username });
+export async function recordSolve(
+  guessCount: number,
+  path: string[] | null,
+  gamemode: string = 'daily',
+  username: string = '',
+  deviceId?: string,
+  maxStreak?: number,
+  totalGamesWon?: number
+): Promise<void> {
+  await api.post('/api/solve', {
+    guess_count: guessCount,
+    path: path,
+    gamemode,
+    username,
+    device_id: deviceId || undefined,
+    max_streak: maxStreak !== undefined ? maxStreak : undefined,
+    total_games_won: totalGamesWon !== undefined ? totalGamesWon : undefined,
+  });
 }
 
 export async function fetchStats(gamemode: string = 'daily'): Promise<GlobalStats> {
@@ -111,6 +127,22 @@ export async function fetchHintWord(wordA: string, wordB: string, username: stri
     username: username || 'Anonim',
     is_super_hint: isSuperHint
   });
+  return res.data;
+}
+
+export interface LeaderboardEntry {
+  username: string;
+  value: number;
+}
+
+export interface LeaderboardData {
+  streaks: LeaderboardEntry[];
+  champions: LeaderboardEntry[];
+  total_wins: LeaderboardEntry[];
+}
+
+export async function fetchLeaderboard(): Promise<LeaderboardData> {
+  const res = await api.get<LeaderboardData>('/api/leaderboard');
   return res.data;
 }
 

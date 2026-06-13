@@ -44,10 +44,24 @@ const PRACTICE_STATS_KEY = 'kelimelink-practice-stats';
 const PRACTICE_GAME_STATE_KEY = 'kelimelink-practice-game-state';
 const VS_STATS_KEY = 'kelimelink-vs-stats';
 const USERNAME_KEY = 'kelimelink-username';
+const DEVICE_ID_KEY = 'kelimelink-device-id';
 
 function generateUsername(): string {
   const num = Math.floor(Math.random() * 1000) + 1;
   return `Oyuncu${num}`;
+}
+
+function generateDeviceId(): string {
+  // crypto.randomUUID() is available in all modern browsers
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 
@@ -113,6 +127,23 @@ export function useLocalStorage() {
   const [vsStats, setVsStats] = useState<VsStats>(() =>
     loadFromStorage(VS_STATS_KEY, DEFAULT_VS_STATS)
   );
+
+  // Device ID (UUID) - kimlik hırsızlığını önlemek için
+  const [deviceId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(DEVICE_ID_KEY);
+      if (saved && saved.trim()) return saved;
+    } catch {
+      // localStorage erişimi engellenmiş olabilir
+    }
+    const generated = generateDeviceId();
+    try {
+      localStorage.setItem(DEVICE_ID_KEY, generated);
+    } catch {
+      // localStorage yazma hatası
+    }
+    return generated;
+  });
 
   // İstatistikleri güncelle
   useEffect(() => {
@@ -250,6 +281,7 @@ export function useLocalStorage() {
     practiceStats,
     username,
     setUsername,
+    deviceId,
     loadGameState,
     saveGameState,
     loadPracticeGameState,
@@ -267,7 +299,7 @@ export function useLocalStorage() {
 /**
  * İki tarih stringi arasında 1 gün fark olup olmadığını kontrol eder.
  */
-function isYesterday(prevDate: string, currentDate: string): boolean {
+export function isYesterday(prevDate: string, currentDate: string): boolean {
   const prev = new Date(prevDate);
   const curr = new Date(currentDate);
   const diff = curr.getTime() - prev.getTime();

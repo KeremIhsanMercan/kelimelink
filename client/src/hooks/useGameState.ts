@@ -4,7 +4,7 @@ import {
   fetchSimilarities, recordSolve, fetchStats, rebuildBoard,
   type SimilarityResult
 } from '../services/api';
-import { useLocalStorage } from './useLocalStorage';
+import { useLocalStorage, isYesterday } from './useLocalStorage';
 import type {
   GraphNode, GraphLink
 } from '../utils/graphUtils';
@@ -108,7 +108,7 @@ function buildGameState({
 
 export function useGameState() {
   const {
-    stats, practiceStats, vsStats, username, setUsername,
+    stats, practiceStats, vsStats, username, setUsername, deviceId,
     loadGameState, saveGameState, loadPracticeGameState,
     savePracticeGameState, clearPracticeGameState,
     recordWin, recordPracticeWin, recordVsGame
@@ -364,10 +364,16 @@ export function useGameState() {
             const winPathLocal = findShortestPath(prev.wordA, prev.wordB, adjForPath);
             if (gameMode === 'daily') {
               recordWin(prev.puzzleDate, newGuessCount);
-              recordSolve(newGuessCount, winPathLocal, 'daily', username).catch(() => { });
+              // Streak: recordWin henüz state'i güncellemedi (async), bu yüzden burada hesaplıyoruz
+              const isConsecutive = stats.lastPlayedDate !== null && isYesterday(stats.lastPlayedDate, prev.puzzleDate);
+              const newStreak = isConsecutive ? stats.currentStreak + 1 : 1;
+              const newMaxStreak = Math.max(stats.maxStreak, newStreak);
+              const totalWon = (stats.gamesWon + 1) + practiceStats.gamesWon + vsStats.gamesWon;
+              recordSolve(newGuessCount, winPathLocal, 'daily', username, deviceId, newMaxStreak, totalWon).catch(() => { });
             } else if (gameMode === 'practice') {
               recordPracticeWin(newGuessCount);
-              recordSolve(newGuessCount, winPathLocal, 'practice', username).catch(() => { });
+              const totalWon = stats.gamesWon + (practiceStats.gamesWon + 1) + vsStats.gamesWon;
+              recordSolve(newGuessCount, winPathLocal, 'practice', username, deviceId, stats.maxStreak, totalWon).catch(() => { });
             } else if (gameMode === 'vs') {
               recordSolve(newGuessCount, winPathLocal, 'vs', username).catch(() => { });
             }
@@ -401,7 +407,7 @@ export function useGameState() {
         setState((prev) => ({ ...prev, isGuessing: false, error: message }));
       }
     },
-    [state.nodes, state.isSolved, state.puzzleDate, state.wordA, state.wordB, saveGameState, recordWin, recordPracticeWin, gameMode, savePracticeGameState, username]
+    [state.nodes, state.isSolved, state.puzzleDate, state.wordA, state.wordB, state.bannedWords, saveGameState, recordWin, recordPracticeWin, gameMode, savePracticeGameState, username, deviceId, stats, practiceStats, vsStats]
   );
 
   const selectNode = useCallback(

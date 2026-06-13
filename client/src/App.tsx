@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users, ArrowUp, Menu, ChevronDown, BookOpen, Clock, PenTool, Signpost } from 'lucide-react';
+import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users, ArrowUp, Menu, ChevronDown, BookOpen, Clock, PenTool, Signpost, Trophy } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useVsMode } from './hooks/useVsMode';
@@ -19,6 +19,7 @@ import VsGameOverModal from './components/VsGameOverModal';
 import VsRematchModal from './components/VsRematchModal';
 // CookieBanner removed for AdSense built-in CMP
 import Footer from './components/Footer';
+import LeaderboardModal from './components/LeaderboardModal';
 import StructuredData, {
   createWebSiteSchema,
   createWebApplicationSchema,
@@ -78,6 +79,7 @@ export default function App() {
   const { isDark, toggleDarkMode } = useDarkMode();
   const [showProfile, setShowProfile] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showNavMenu, setShowNavMenu] = useState(false);
   const [hideScrollIndicator, setHideScrollIndicator] = useState(false);
 
@@ -388,9 +390,9 @@ export default function App() {
       {/* Üst Başlık */}
       <header className="app-header">
         <div className="app-header__left-actions">
-          <div className="nav-menu-container" style={{ position: 'relative' }}>
+          <div className="nav-menu-wrapper hide-on-mobile" style={{ position: 'relative' }}>
             <button
-              className={`app-header__action-btn`}
+              className="app-header__action-btn"
               onClick={() => setShowNavMenu(!showNavMenu)}
               aria-label="Menü"
               title="Menü"
@@ -483,6 +485,14 @@ export default function App() {
               <RefreshCw size={20} />
             </button>
           )}
+          <button
+            className={`app-header__action-btn ${gameMode === 'practice' ? 'hide-on-mobile' : ''}`}
+            onClick={() => setShowLeaderboard(true)}
+            aria-label="Başarı Listesi"
+            title="Başarı Listesi"
+          >
+            <Trophy size={20} />
+          </button>
           <button
             className="app-header__action-btn"
             onClick={() => setShowProfile(true)}
@@ -594,6 +604,13 @@ export default function App() {
       {showInfo && (
         <InfoModal
           onClose={() => setShowInfo(false)}
+        />
+      )}
+
+      {/* Leaderboard Modal */}
+      {showLeaderboard && (
+        <LeaderboardModal
+          onClose={() => setShowLeaderboard(false)}
         />
       )}
 

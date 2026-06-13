@@ -1411,6 +1411,178 @@ html.dark .link-row--linked-path:hover {
 .profile-modal__close-btn:active {
     transform: translateY(0);
 }
+/* ============================================
+   Leaderboard Modal
+   ============================================ */
+
+.leaderboard-modal {
+    max-width: 460px;
+}
+
+.leaderboard-modal__avatar {
+    background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+    color: #d97706 !important;
+}
+
+.leaderboard-content {
+    margin-bottom: 20px;
+    min-height: 180px;
+}
+
+.leaderboard-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px 0;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.leaderboard-spinner {
+    animation: spin 1s linear infinite;
+}
+
+.leaderboard-empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    animation: fadeSlideUp 0.35s ease both;
+}
+
+.leaderboard-item:nth-child(1) { animation-delay: 0s; }
+.leaderboard-item:nth-child(2) { animation-delay: 0.05s; }
+.leaderboard-item:nth-child(3) { animation-delay: 0.1s; }
+.leaderboard-item:nth-child(4) { animation-delay: 0.15s; }
+.leaderboard-item:nth-child(5) { animation-delay: 0.2s; }
+
+@keyframes fadeSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.leaderboard-item:hover {
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-sm);
+}
+
+.leaderboard-item--gold {
+    border-color: #f59e0b;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(251, 191, 36, 0.04));
+}
+
+.leaderboard-item--gold:hover {
+    border-color: #f59e0b;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.leaderboard-item--silver {
+    border-color: #9ca3af;
+    background: linear-gradient(135deg, rgba(156, 163, 175, 0.08), rgba(209, 213, 219, 0.04));
+}
+
+.leaderboard-item--silver:hover {
+    border-color: #9ca3af;
+    box-shadow: 0 2px 8px rgba(156, 163, 175, 0.15);
+}
+
+.leaderboard-item--bronze {
+    border-color: #d97706;
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.06), rgba(245, 158, 11, 0.03));
+}
+
+.leaderboard-item--bronze:hover {
+    border-color: #d97706;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.12);
+}
+
+.leaderboard-item__rank {
+    font-size: 1.1rem;
+    width: 28px;
+    text-align: center;
+    flex-shrink: 0;
+    font-weight: 700;
+    color: var(--color-text-muted);
+}
+
+.leaderboard-item--gold .leaderboard-item__rank,
+.leaderboard-item--silver .leaderboard-item__rank,
+.leaderboard-item--bronze .leaderboard-item__rank {
+    font-size: 1.3rem;
+}
+
+.leaderboard-item__name {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.leaderboard-item__value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.leaderboard-item__suffix {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
+.leaderboard-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: var(--radius-md);
+    margin-bottom: 20px;
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+html.dark .leaderboard-note {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.leaderboard-note svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--color-text-muted);
+}
 
 /* ============================================
    Info Modal
@@ -1658,6 +1830,10 @@ html.dark .link-row--linked-path:hover {
 
     .app-header__subtitle {
         display: none;
+    }
+
+    .hide-on-mobile {
+        display: none !important;
     }
 
     .sidebar {

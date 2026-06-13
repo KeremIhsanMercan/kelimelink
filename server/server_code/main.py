@@ -34,7 +34,8 @@ from nlp_engine import (
 from database import (
     init_tables, get_daily_puzzle, save_daily_puzzle, 
     record_solve, get_today_stats, save_custom_link_request, 
-    get_all_custom_links, add_custom_link
+    get_all_custom_links, add_custom_link,
+    upsert_leaderboard_streak, upsert_leaderboard_total_wins, get_leaderboard
 )
 import vs_manager
 
@@ -150,6 +151,9 @@ class SolveRequest(BaseModel):
     gamemode: str = Field(default="daily", max_length=50)
     username: str = Field(default="", max_length=20)
     path: list[str] = Field(default_factory=list)
+    device_id: str | None = Field(default=None, max_length=64)
+    max_streak: int | None = Field(default=None, ge=0, le=10000)
+    total_games_won: int | None = Field(default=None, ge=0, le=10000)
 
 class RebuildRequest(BaseModel):
     word_a: str
@@ -329,6 +333,19 @@ async def solve(req: SolveRequest, request: Request):
         username = req.username.strip() if req.username else None
         record_solve(today, req.guess_count, req.gamemode, username=username, path=path_str_db)
         
+        # Leaderboard güncellemesi (sadece daily ve practice modlarında)
+        if req.device_id and username:
+            if req.max_streak is not None:
+                try:
+                    upsert_leaderboard_streak(req.device_id, username, req.max_streak)
+                except Exception as e:
+                    logger.error(f"[Sunucu] Leaderboard streak hatası: {e}")
+            if req.total_games_won is not None:
+                try:
+                    upsert_leaderboard_total_wins(req.device_id, username, req.total_games_won)
+                except Exception as e:
+                    logger.error(f"[Sunucu] Leaderboard total_wins hatası: {e}")
+        
         # Logging
         client_host = request.client.host if request.client else "unknown"
         path_items = list(req.path) if req.path else []
@@ -348,6 +365,16 @@ async def solve(req: SolveRequest, request: Request):
 async def stats(gamemode: str = Query(default="daily", max_length=50)):
     today = datetime.now(timezone.utc).date()
     return get_today_stats(today, gamemode)
+
+
+@app.get("/api/leaderboard")
+async def leaderboard():
+    """Liderlik tablosu verilerini döndürür (top 5 her kategori)."""
+    try:
+        return get_leaderboard()
+    except Exception as e:
+        logger.error(f"[Sunucu] Leaderboard hatası: {e}")
+        raise HTTPException(status_code=500, detail="Liderlik tablosu yüklenemedi.")
 
 
 @app.post("/api/similarities")
