@@ -97,7 +97,7 @@ export default function Sidebar({
     const guessedNodes = nodes.filter(n => n.type === 'guessed');
     let targetWordA = wordA;
     let targetWordB = wordB;
-    
+
     for (let i = guessedNodes.length - 1; i >= 0; i--) {
       const n = guessedNodes[i];
       if (n.chainSide === 'a' || n.chainSide === 'b') {
@@ -294,8 +294,8 @@ export default function Sidebar({
         <div className="sidebar__label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>Kelime Ekle</span>
           {gameMode === 'practice' && (
-            <button 
-              className="hint-btn" 
+            <button
+              className="hint-btn"
               onClick={handleHintClick}
               disabled={isFetchingHint || isSolved || guessCount === 0}
               title="İpucu Al"
@@ -356,7 +356,7 @@ export default function Sidebar({
                 <button
                   className="record-hint-btn"
                   onClick={() => setShowRecord((prev) => !prev)}
-                  title="Günün rekorunu gör"
+                  title="Günün şampiyonunu gör"
                 >
                   <HelpCircle size={15} />
                 </button>
@@ -366,7 +366,7 @@ export default function Sidebar({
               <div className="record-popover">
                 {dailyRecordHolder && dailyRecordHolder.minGuesses > 0 && dailyRecordHolder.username ? (
                   <>
-                    <div className="record-popover__title">🏆 Günün Rekoru</div>
+                    <div className="record-popover__title">🏆 Günün Şampiyonu</div>
                     <div className="record-popover__user">
                       <strong>{dailyRecordHolder.username}</strong> — {dailyRecordHolder.minGuesses} tahmin
                     </div>
