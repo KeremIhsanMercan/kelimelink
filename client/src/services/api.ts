@@ -141,8 +141,29 @@ export interface LeaderboardData {
   total_wins: LeaderboardEntry[];
 }
 
+let cachedLeaderboard: LeaderboardData | null = null;
+let leaderboardFetchPromise: Promise<LeaderboardData> | null = null;
+
 export async function fetchLeaderboard(): Promise<LeaderboardData> {
-  const res = await api.get<LeaderboardData>('/api/leaderboard');
-  return res.data;
+  if (leaderboardFetchPromise) {
+    return leaderboardFetchPromise;
+  }
+
+  leaderboardFetchPromise = api.get<LeaderboardData>('/api/leaderboard')
+    .then(res => {
+      cachedLeaderboard = res.data;
+      leaderboardFetchPromise = null;
+      return res.data;
+    })
+    .catch(err => {
+      leaderboardFetchPromise = null;
+      throw err;
+    });
+
+  return leaderboardFetchPromise;
+}
+
+export function getCachedLeaderboard(): LeaderboardData | null {
+  return cachedLeaderboard;
 }
 

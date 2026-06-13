@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Flame, Trophy, Star, Loader, Info } from 'lucide-react';
-import { fetchLeaderboard, type LeaderboardData } from '../services/api';
+import { fetchLeaderboard, getCachedLeaderboard, type LeaderboardData } from '../services/api';
 
 interface LeaderboardModalProps {
   onClose: () => void;
@@ -19,12 +19,15 @@ const TAB_CONFIG: { key: LeaderboardTab; icon: typeof Flame; label: string; suff
 
 export default function LeaderboardModal({ onClose }: LeaderboardModalProps) {
   const [activeTab, setActiveTab] = useState<LeaderboardTab>('streaks');
-  const [data, setData] = useState<LeaderboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState<LeaderboardData | null>(getCachedLeaderboard());
+  const [isLoading, setIsLoading] = useState(!getCachedLeaderboard());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
+    // Sadece ilk yüklemede ve cached data yoksa yükleniyor state'ini göster
+    if (!getCachedLeaderboard()) {
+      setIsLoading(true);
+    }
     setError(null);
     fetchLeaderboard()
       .then((res) => {
