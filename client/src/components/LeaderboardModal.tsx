@@ -14,7 +14,7 @@ const RANK_CLASSES = ['leaderboard-item--gold', 'leaderboard-item--silver', 'lea
 const TAB_CONFIG: { key: LeaderboardTab; icon: typeof Flame; label: string; suffix: string }[] = [
   { key: 'streaks', icon: Flame, label: 'En Uzun Seri', suffix: 'gün' },
   { key: 'champions', icon: Trophy, label: 'Gün Şampiyonları', suffix: 'kez' },
-  { key: 'total_wins', icon: Star, label: 'En Çok Oynayan', suffix: 'oyun' },
+  { key: 'total_wins', icon: Star, label: 'En Çok Kazanan', suffix: 'puan' },
 ];
 
 export default function LeaderboardModal({ onClose }: LeaderboardModalProps) {
