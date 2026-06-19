@@ -250,7 +250,7 @@ export function useGameState() {
     initDailyGame().then(nextState => {
       if (!cancelled) setState(nextState);
     }).catch(() => {
-      if (!cancelled) setState(prev => ({ ...prev, isLoading: false, error: 'Bulmaca yüklenemedi. Sunucu güncelleniyor...' }));
+      if (!cancelled) setState(prev => ({ ...prev, isLoading: false, error: 'Bulmaca yüklenemedi. Lütfen daha sonra tekrar deneyin. Beklerken blog yazılarımızı okuyabilirsiniz.' }));
     });
     return () => { cancelled = true; };
   }, [initDailyGame]);

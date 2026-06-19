@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users, ArrowUp, Menu, ChevronDown, BookOpen, Clock, PenTool, Signpost, Trophy } from 'lucide-react';
+import { Swords, Calendar, RefreshCw, BarChart3, Moon, Sun, Info, Users, ArrowUp, ChevronDown, Trophy } from 'lucide-react';
 import { useGameState } from './hooks/useGameState';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useVsMode } from './hooks/useVsMode';
@@ -25,6 +25,7 @@ import StructuredData, {
   createWebApplicationSchema,
   createBreadcrumbSchema,
 } from './components/StructuredData';
+import NavMenu from './components/NavMenu';
 import './index.css';
 
 export default function App() {
@@ -80,7 +81,6 @@ export default function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [showNavMenu, setShowNavMenu] = useState(false);
   const [hideScrollIndicator, setHideScrollIndicator] = useState(false);
 
   const [hasClickedInfo, setHasClickedInfo] = useState(() => {
@@ -291,6 +291,17 @@ export default function App() {
         kelimelerin birbirine bağlanmasının uygun olduğuna karar verilirse bu kelimeler birbirine bağlanabilir hale getirilecektir.
       </p>
 
+      <h3>Bu oyunda kaybetmek mümkün mü?</h3>
+      <p>
+        Hayır, kaybetmeniz mümkün değildir. Pes etmeyip tahminde bulunmaya devam ettiğiniz sürece kazanma ihtimaliniz var.
+      </p>
+
+      <h3>Neden bazı kelimeler kabul edilmiyor?</h3>
+      <p>
+        Kabul ettiğimiz kelimeler anlam uzayında var olması gerektiği için sadece sözlüğümüzde var olan yani Numberbatch'in anlam uzayında nerede olduğunu
+        bildiğimiz kelimeleri kabul edebiliyoruz. Ayrıca, iki harften az veya ayrı yazılan kelimeleri kabul etmiyoruz.
+      </p>
+
       <h3>Pratik modundaki ipuçları nasıl çalışıyor?</h3>
       <p>
         Pratik modunda ipucu istediğinizde, sistem tahtaya eklediğiniz son kelime ile diğer hedef kelime arasındaki bağlantı uzayını tarar.
@@ -390,25 +401,7 @@ export default function App() {
       {/* Üst Başlık */}
       <header className="app-header">
         <div className="app-header__left-actions">
-          <div className="nav-menu-wrapper hide-on-mobile" style={{ position: 'relative' }}>
-            <button
-              className="app-header__action-btn"
-              onClick={() => setShowNavMenu(!showNavMenu)}
-              aria-label="Menü"
-              title="Menü"
-            >
-              <Menu size={20} />
-            </button>
-            {showNavMenu && (
-              <div className="nav-menu-dropdown">
-                <a href="/nasil-oynanir" className="nav-menu-item"><Signpost size={16} /> Detaylı Oyun Rehberi</a>
-                <a href="/hakkinda" className="nav-menu-item"><PenTool size={16} /> Hakkında</a>
-                <a href="/arsiv" className="nav-menu-item"><Clock size={16} /> Arşiv</a>
-                <a href="/blog/konseptnet-nasil-calisir" className="nav-menu-item"><BookOpen size={16} /> Blog: ConceptNet</a>
-                <a href="/blog/kelime-oyunlarinda-nlp" className="nav-menu-item"><BookOpen size={16} /> Blog: NLP</a>
-              </div>
-            )}
-          </div>
+          <NavMenu />
           <button
             className={`app-header__action-btn`}
             onClick={handleInfoClick}

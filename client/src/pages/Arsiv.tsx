@@ -84,7 +84,7 @@ export default function Archive() {
         {seoIntro}
 
         {puzzles.length === 0 ? (
-          <p>Geçmiş günlere ait bir kayıtlar yüklenemedi.</p>
+          <p>Arşiv yüklenemedi. Lütfen daha sonra tekrar deneyin. Beklerken blog yazılarımızı okuyabilirsiniz.</p>
         ) : (
           <div className="archive-list">
             {puzzles.map((puzzle) => (

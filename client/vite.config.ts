@@ -26,10 +26,14 @@ export default defineConfig(async () => {
           '/arsiv',
           '/nasil-oynanir',
           '/hakkinda',
+          '/blog',
           '/blog/konseptnet-nasil-calisir',
           '/blog/kelime-oyunlarinda-nlp',
+          '/blog/turkce-kelime-oyunlari-tarihi',
+          '/blog/yapay-zeka-ve-kelime-ogrenimi',
           '/gizlilik-politikasi',
-          '/kullanim-kosullari'
+          '/kullanim-kosullari',
+          '/iletisim'
         ],
         renderer: '@prerenderer/renderer-puppeteer',
         rendererOptions: {

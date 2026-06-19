@@ -1,8 +1,10 @@
-import { Moon, Sun, ArrowLeft } from 'lucide-react';
+import { Moon, Sun, Home } from 'lucide-react';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useRenderReady } from '../hooks/useRenderReady';
 import { useSEO } from '../hooks/useSEO';
 import StructuredData, { createBreadcrumbSchema } from './StructuredData';
+import Footer from './Footer';
+import NavMenu from './NavMenu';
 import { useMemo } from 'react';
 
 interface ContentLayoutProps {
@@ -51,8 +53,9 @@ export default function ContentLayout({
       {allSchemas && <StructuredData data={allSchemas} />}
       <header className="app-header">
         <div className="app-header__left-actions">
+          <NavMenu />
           <a href="/" className="app-header__action-btn" title="Ana Sayfaya Dön">
-            <ArrowLeft size={20} />
+            <Home size={20} />
           </a>
         </div>
         <img src="/favicon.png" alt="KelimeLink Logo" className="app-header__logo" />
@@ -76,23 +79,7 @@ export default function ContentLayout({
         </article>
       </main>
 
-      <footer className="app-footer">
-        <div className="app-footer__content">
-          <div className="app-footer__links">
-            <a href="/nasil-oynanir">Nasıl Oynanır?</a>
-            <a href="/hakkinda">Hakkında</a>
-            <a href="/arsiv">Bulmaca Arşivi</a>
-            <a href="/blog/konseptnet-nasil-calisir">ConceptNet Nasıl Çalışır?</a>
-            <a href="/blog/kelime-oyunlarinda-nlp">Kelime Oyunlarında NLP</a>
-            <a href="/gizlilik-politikasi">Gizlilik Politikası</a>
-            <a href="/kullanim-kosullari">Kullanım Şartları</a>
-            <a href="mailto:krmhsnmrcn220@gmail.com">İletişim</a>
-          </div>
-          <div className="app-footer__copyright">
-            © 2026 KelimeLink. Tüm hakları saklıdır.
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
