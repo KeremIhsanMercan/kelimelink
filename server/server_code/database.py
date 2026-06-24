@@ -272,7 +272,7 @@ def save_daily_puzzle(today: date, word_a: str, word_b: str):
         )
 
 
-def record_solve(today: date, guess_count: int, gamemode: str = "daily", username: str | None = None, path: str | None = None):
+def record_solve(today: date, guess_count: int, path_size: int, gamemode: str = "daily", username: str | None = None, path: str | None = None):
     """Çözüm kaydeder ve istatistikleri günceller."""
     with get_cursor() as cur:
         cur.execute(
@@ -298,7 +298,7 @@ def record_solve(today: date, guess_count: int, gamemode: str = "daily", usernam
                     ELSE global_stats.min_guesses_path
                 END
             """,
-            (today, gamemode, guess_count, guess_count, username, path),
+            (today, gamemode, guess_count, path_size, username, path),
         )
 
 

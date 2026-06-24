@@ -331,7 +331,9 @@ async def solve(req: SolveRequest, request: Request):
     try:
         path_str_db = ", ".join(req.path) if req.path else None
         username = req.username.strip() if req.username else None
-        record_solve(today, req.guess_count, req.gamemode, username=username, path=path_str_db)
+        
+        path_size = max(1, len(req.path) - 2) if req.path else req.guess_count
+        record_solve(today, req.guess_count, path_size, req.gamemode, username=username, path=path_str_db)
         
         # Leaderboard güncellemesi (sadece daily ve practice modlarında)
         if req.device_id and username:

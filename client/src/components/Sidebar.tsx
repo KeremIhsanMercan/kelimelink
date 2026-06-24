@@ -368,7 +368,7 @@ export default function Sidebar({
                   <>
                     <div className="record-popover__title">🏆 Günün Şampiyonu</div>
                     <div className="record-popover__user">
-                      <strong>{dailyRecordHolder.username}</strong> — {dailyRecordHolder.minGuesses} tahmin
+                      <strong>{dailyRecordHolder.username}</strong> — {dailyRecordHolder.minGuesses} adım
                     </div>
 
                     {dailyRecordHolder.path && (
