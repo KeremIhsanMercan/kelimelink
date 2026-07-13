@@ -21,9 +21,11 @@ import VsRematchModal from './components/VsRematchModal';
 import Footer from './components/Footer';
 import LeaderboardModal from './components/LeaderboardModal';
 import StructuredData, {
+  createOrganizationSchema,
   createWebSiteSchema,
   createWebApplicationSchema,
   createBreadcrumbSchema,
+  createFAQSchema
 } from './components/StructuredData';
 import NavMenu from './components/NavMenu';
 import './index.css';
@@ -176,9 +178,62 @@ export default function App() {
   // Structured data schemas — memoized to avoid re-creation on each render
   const homepageSchemas = useMemo(
     () => [
+      createOrganizationSchema(),
       createWebSiteSchema(),
       createWebApplicationSchema(),
       createBreadcrumbSchema([{ name: 'Ana Sayfa', path: '/' }]),
+      createFAQSchema([
+        {
+          question: 'Kelimelerin bağlantı skoru nasıl bulunuyor?',
+          answer: 'KelimeLink, Türkçe kelimeleri anlamlarına göre 300 boyutlu matematiksel vektörler olarak temsil eden gelişmiş bir yapay zeka ve doğal dil işleme (NLP) modeli kullanır. Oyuna yazdığınız her kelimenin matematiksel konumu hesaplanır ve oyun tahtasındaki diğer kelimelerin konumlarıyla karşılaştırılarak aralarındaki anlamsal mesafe kosinüs benzerliği ile hesaplanır. Anlamca yakın kelimeler, bu çok boyutlu uzayda birbirine daha yakın noktalarda bulunurlar.',
+        },
+        {
+          question: 'Kosinüs Benzerliği (Cosine Similarity) nedir?',
+          answer: 'Kosinüs benzerliği, makine öğrenmesi ve veri biliminde iki vektör arasındaki açıyı ölçerek birbirlerine ne kadar benzediklerini bulmaya yarayan standart bir formüldür. Kelimeler 300 boyutlu uzayda birbirlerine ne kadar yakın bir yönü gösteriyorsa, anlamsal olarak o kadar bağlantılıdırlar. KelimeLink, bu karmaşık matematiksel hesabı arka planda anlık olarak yapar ve sonucu sizin için anlaşılır yüzdelik bir skora (örneğin %45) dönüştürür.',
+        },
+        {
+          question: 'Neden bağlantı sınırı %26?',
+          answer: 'Kullandığımız dil modelinde, kelimeler arası ilişkilerin "rastgele" olmaktan çıkıp gerçekten anlamlı ve sezgisel bir seviyeye ulaştığı denge noktası, kapsamlı testlerimiz ve kullanıcı geri bildirimlerimiz sonucunda %26 olarak belirlenmiştir. Bu oranın altındaki skorlar genellikle çok zayıf veya tesadüfi ilişkileri ifade ederken, %26 ve üzerindeki skorlar iki kelime arasında güçlü bir "anlamsal köprü" kurmaya yetecek kadar yakındır. Farklı bir oran öneriniz var ise, kelime örnekleriniz ile beraber bize ulaşabilirsiniz.',
+        },
+        {
+          question: 'Bağlanması gerektiğini düşündüğüm kelimeler bağlanmadı, ne yapmalıyım?',
+          answer: `Yapay zeka dil modelleri devasa metin verilerinden (Wikipedia, haber siteleri, makaleler vb.) öğrenirler. Bazen günlük hayatta bize çok bariz gelen kültürel, yerel veya mecazi bir bağlantı, modelin eğitim verisinde istatistiksel olarak yeterince güçlü yer almamış olabilir. Bu durumu elimizden geldiğince düzeltmek için sizden yardım alıyoruz. Bağlanması gerektiğini düşündüğünüz kelime çiftlerini Bağlananlar ve Bağlanmayanlar listesindeki '+' butonuna tıklayarak bize gönderebilirsiniz. Gönderdiğiniz kelime çiftleri ekibimiz tarafından incelenerek, kelimelerin birbirine bağlanmasının uygun olduğuna karar verilirse bu kelimeler birbirine bağlanabilir hale getirilecektir.`,
+        },
+        {
+          question: 'Bu oyunda kaybetmek mümkün mü?',
+          answer: 'Hayır, kaybetmeniz mümkün değildir. Pes etmeyip tahminde bulunmaya devam ettiğiniz sürece kazanma ihtimaliniz var.',
+        },
+        {
+          question: 'Neden bazı kelimeler kabul edilmiyor?',
+          answer: 'Kabul ettiğimiz kelimeler anlam uzayında var olması gerektiği için sadece sözlüğümüzde var olan yani Numberbatchin anlam uzayında nerede olduğunu bildiğimiz kelimeleri kabul edebiliyoruz. Ayrıca, iki harften az veya ayrı yazılan kelimeleri kabul etmiyoruz.',
+        },
+        {
+          question: 'Pratik modundaki ipuçları nasıl çalışıyor?',
+          answer: `Pratik modunda ipucu istediğinizde, sistem tahtaya eklediğiniz son kelime ile diğer hedef kelime arasındaki bağlantı uzayını tarar.
+        Amacı, eklediğiniz kelimeye kesin olarak bağlanabilen (benzerliği %26'nın üzerinde olan) yeni bir kelime bulmaktır.
+        Bunu yaparken üç farklı strateji izler:
+        1. Normal İpucu: Doğrudan çözümü vermemek için, tahtadaki kelimeye ne çok uzak ne de çok yakın olan
+        (benzerliği %15 ile %25 arasında olan) dengeli bir kelime seçer. Böylece var olduğunuz noktadan, hedefe doğru bir adım atmış olursunuz.
+        2. Süper İpucu: 4 ipucu isteğinizden sonraki her isteğiniz Süper İpucu olarak değerlendirilir.
+        Bu ipucu için hem eklediğiniz kelimeye hem de hedef kelimeye aynı anda bağlanabilen
+        (her ikisine de %26 veya daha fazla benzeyen) nadir "altın köprü" kelimelerini arar.
+        3. En İyi Alternatif: Eğer yukarıdaki koşullara uyan bir kelime bulunamazsa,
+        tahtadaki kelimeye bağlanan kelimeler arasından hedefe en çok yaklaşan (en yüksek benzerlik skoruna sahip)
+        kelimeyi seçerek size ipucu olarak sunar.`,
+        },
+        {
+          question: 'İpuçları neden bazen çok üst seviye veya yabancı kökenli kelimeler veriyor?',
+          answer: `KelimeLink'in altyapısını oluşturan dil modeli, kelime ilişkilerini birçok farklı dilde yazılmış devasa metin veri setlerini (akademik makaleler, kitaplar, haberler vb.) okuyarak öğrenmiştir. Türkçe; Arapça, Farsça ve Fransızca gibi dillerden birçok kelime almış zengin bir dildir. Sistemimiz size bir ipucu seçerken kelimenin günlük hayattaki popülerliğine değil, hedef kelimeye olan matematiksel yakınlığına bakar. Bu nedenle bazen hedefe giden en optimal ve kısa yol; günlük konuşmada sık kullanmadığımız eski bir kelimeden, eş anlamlı yabancı kökenli bir kelimeden veya akademik bir terimden geçebilir.`
+        },
+        {
+          question: `KelimeLink, Linxicon'un Türkçe sürümü mü?`,
+          answer: `KelimeLink, İngilizce kelime oyunu Linxicon'dan ilham alınarak Türkçe için sıfırdan geliştirilmiş, bağımsız bir projedir. Linxicon'un resmi bir Türkçe sürümü bulunmuyor. KelimeLink bu boşluğu doldurmak için farklı bir NLP altyapısı (ConceptNet Numberbatch), özel bir Türkçe bağlantı veritabanı, gerçek zamanlı VS modu ve çok daha gelişkin bir ipucu sistemiyle özgün biçimde tasarlandı. Detaylı karşılaştırma için Linxicon Türkçe blog yazımıza göz atabilirsiniz.`,
+        },
+        {
+          question: `KelimeLink oynamak ücretli mi?`,
+          answer: `Hayır, KelimeLink oynamak tamamen ücretsizdir. Her gün yenilenen Günlük Bulmacayı çözebilir, Pratik modunda sınırsız antrenman yapabilir ve arkadaşlarınızla VS modunda çevrimiçi olarak hiçbir ücret ödemeden yarışabilirsiniz.`,
+        }
+      ]),
     ],
     []
   );
@@ -197,6 +252,9 @@ export default function App() {
         yazdığınız her kelimenin diğer kelimelerle olan anlamsal benzerliği gerçek zamanlı
         olarak ölçülür. Hem kelime dağarcığınızı test eden hem de analitik düşünme becerinizi
         geliştiren bu semantik oyun, klasik bulmaca ve kelime oyunlarına yepyeni bir boyut kazandırıyor.
+        İngilizce{' '}<a href="/blog/linxicon-turkce" style={{ textDecoration: 'underline', color: 'var(--primary-color)' }}>Linxicon</a>'un
+        Türkçe karşılığını arıyorsanız doğru yerdesiniz: KelimeLink, Linxicon'dan ilham alınarak
+        Türkçe için sıfırdan inşa edilmiş bir <a href="/blog/linxicon-turkce" style={{ textDecoration: 'underline', color: 'var(--primary-color)' }}>Linxicon alternatifi</a>dir.
       </p>
 
       <h2>Nasıl Oynanır ve Kurallar Nelerdir?</h2>
@@ -326,6 +384,16 @@ export default function App() {
         <strong> matematiksel yakınlığına</strong> bakar. Bu nedenle bazen hedefe giden en optimal ve kısa yol;
         günlük konuşmada sık kullanmadığımız eski bir kelimeden, eş anlamlı yabancı kökenli bir kelimeden veya
         akademik bir terimden geçebilir.
+      </p>
+
+      <h3>KelimeLink, Linxicon'un Türkçe sürümü mü?</h3>
+      <p>
+        KelimeLink, İngilizce kelime oyunu <a href="/blog/linxicon-turkce" style={{ textDecoration: 'underline', color: 'var(--primary-color)' }}>Linxicon</a>'dan
+        ilham alınarak Türkçe için sıfırdan geliştirilmiş, bağımsız bir projedir. Linxicon'un resmi bir Türkçe
+        sürümü bulunmuyor. KelimeLink bu boşluğu doldurmak için farklı bir NLP altyapısı
+        (ConceptNet Numberbatch), özel bir Türkçe bağlantı veritabanı, gerçek zamanlı VS modu ve
+        çok daha gelişkin bir ipucu sistemiyle özgün biçimde tasarlandı.
+        Detaylı karşılaştırma için <a href="/blog/linxicon-turkce" style={{ textDecoration: 'underline', color: 'var(--primary-color)' }}>Linxicon Türkçe blog yazımıza</a> göz atabilirsiniz.
       </p>
 
       <h3>KelimeLink oynamak ücretli mi?</h3>

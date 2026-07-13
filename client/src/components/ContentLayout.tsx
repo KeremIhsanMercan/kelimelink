@@ -16,6 +16,7 @@ interface ContentLayoutProps {
     path: string;
     ogTitle?: string;
     ogDescription?: string;
+    ogType?: string;
   };
   structuredData?: Record<string, unknown> | Record<string, unknown>[];
   breadcrumbs?: { name: string; path: string }[];

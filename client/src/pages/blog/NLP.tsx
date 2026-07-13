@@ -20,11 +20,12 @@ export default function BlogNLP() {
         path: '/blog/kelime-oyunlarinda-nlp',
         ogTitle: 'Kelime Oyunlarında Doğal Dil İşleme (NLP)',
         ogDescription: 'NLP teknolojileri kelime oyunlarını nasıl dönüştürüyor? Word2Vec, GloVe, FastText ve Transformer modelleri hakkında kapsamlı rehber.',
+        ogType: "article",
       }}
       structuredData={articleSchema}
       breadcrumbs={[
         { name: 'Ana Sayfa', path: '/' },
-        { name: 'Blog', path: '/blog/kelime-oyunlarinda-nlp' },
+        { name: 'Blog', path: '/blog' },
         { name: 'Kelime Oyunlarında NLP', path: '/blog/kelime-oyunlarinda-nlp' },
       ]}
     >

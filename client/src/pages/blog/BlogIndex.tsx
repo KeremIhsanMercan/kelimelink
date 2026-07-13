@@ -31,6 +31,7 @@ export default function BlogIndex() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '30px' }}>
 
+
         <a href="/blog/kelime-oyunlarinda-nlp" style={{
           textDecoration: 'none',
           color: 'inherit',
@@ -115,6 +116,46 @@ export default function BlogIndex() {
           </p>
         </a>
 
+        <a href="/blog/linxicon-turkce" style={{
+          textDecoration: 'none',
+          color: 'inherit',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          background: 'var(--color-surface)',
+          padding: '20px',
+          borderRadius: '12px',
+          border: '1px solid var(--color-border)',
+          transition: 'border-color 0.2s',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary-color)' }}>
+            <BookOpen size={20} style={{ transform: 'translateY(-5px)' }} />
+            <h2 style={{ margin: 0, fontSize: '1.25rem', lineHeight: '1.2' }}>Linxicon Türkçe Var mı? KelimeLink ile Karşılaştırma</h2>
+          </div>
+          <p style={{ margin: 0, opacity: 0.8 }}>
+            Linxicon nedir, neden resmi Türkçe sürümü yok ve KelimeLink bu boşluğu nasıl dolduruyor? Benzerlikler ve farklar.
+          </p>
+        </a>
+        <a href="/blog/contexto-turkce" style={{
+          textDecoration: 'none',
+          color: 'inherit',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          background: 'var(--color-surface)',
+          padding: '20px',
+          borderRadius: '12px',
+          border: '1px solid var(--color-border)',
+          transition: 'border-color 0.2s',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary-color)' }}>
+            <BookOpen size={20} style={{ transform: 'translateY(-5px)' }} />
+            <h2 style={{ margin: 0, fontSize: '1.25rem', lineHeight: '1.2' }}>Contexto ve Semantle ile Karşılaştırma</h2>
+          </div>
+          <p style={{ margin: 0, opacity: 0.8 }}>
+            Contexto, Semantle ve KelimeLink karşılaştırması. Semantik kelime oyunlarının Türkçe versiyonları hakkında bilmeniz gerekenler.
+          </p>
+        </a>
       </div>
 
     </ContentLayout>

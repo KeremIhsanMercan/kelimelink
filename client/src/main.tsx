@@ -13,6 +13,9 @@ import NLP from './pages/blog/NLP'
 import BlogIndex from './pages/blog/BlogIndex'
 import TurkceKelimeOyunlari from './pages/blog/TurkceKelimeOyunlari'
 import YapayZekaKelimeOgrenimi from './pages/blog/YapayZekaKelimeOgrenimi'
+import LinxiconTurkce from './pages/blog/LinxiconTurkce'
+import ContextoTurkce from './pages/blog/ContextoTurkce'
+import EnglishLanding from './pages/EnglishLanding'
 import GizlilikPolitikasi from './pages/GizlilikPolitikasi'
 import KullanimKosullari from './pages/KullanimKosullari'
 import Iletisim from './pages/Iletisim'
@@ -30,6 +33,9 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/blog/kelime-oyunlarinda-nlp" element={<NLP />} />
         <Route path="/blog/turkce-kelime-oyunlari-tarihi" element={<TurkceKelimeOyunlari />} />
         <Route path="/blog/yapay-zeka-ve-kelime-ogrenimi" element={<YapayZekaKelimeOgrenimi />} />
+        <Route path="/blog/linxicon-turkce" element={<LinxiconTurkce />} />
+        <Route path="/blog/contexto-turkce" element={<ContextoTurkce />} />
+        <Route path="/en" element={<EnglishLanding />} />
         <Route path="/gizlilik-politikasi" element={<GizlilikPolitikasi />} />
         <Route path="/kullanim-kosullari" element={<KullanimKosullari />} />
         <Route path="/iletisim" element={<Iletisim />} />

@@ -31,6 +31,9 @@ export default defineConfig(async () => {
           '/blog/kelime-oyunlarinda-nlp',
           '/blog/turkce-kelime-oyunlari-tarihi',
           '/blog/yapay-zeka-ve-kelime-ogrenimi',
+          '/blog/linxicon-turkce',
+          '/blog/contexto-turkce',
+          '/en',
           '/gizlilik-politikasi',
           '/kullanim-kosullari',
           '/iletisim'
@@ -56,7 +59,7 @@ export default defineConfig(async () => {
             /(https?:\/\/)?(localhost|127\.0\.0\.1):\d*/ig,
             'https://kelimelink.app',
           )
-          
+
           if (renderedRoute.route === '/') {
             // Ensure the output path for root is strictly index.html in the dist root
             renderedRoute.outputPath = 'index.html';

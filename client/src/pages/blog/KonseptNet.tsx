@@ -20,11 +20,12 @@ export default function BlogConceptNet() {
         path: '/blog/konseptnet-nasil-calisir',
         ogTitle: 'ConceptNet Numberbatch Nasıl Çalışır?',
         ogDescription: 'KelimeLink\'in arkasındaki kelime gömme teknolojisi, kosinüs benzerliği ve semantik analiz hakkında detaylı teknik makale.',
+        ogType: "article",
       }}
       structuredData={articleSchema}
       breadcrumbs={[
         { name: 'Ana Sayfa', path: '/' },
-        { name: 'Blog', path: '/blog/konseptnet-nasil-calisir' },
+        { name: 'Blog', path: '/blog' },
         { name: 'ConceptNet Nasıl Çalışır?', path: '/blog/konseptnet-nasil-calisir' },
       ]}
     >

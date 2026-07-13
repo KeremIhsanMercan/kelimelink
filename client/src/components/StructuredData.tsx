@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-
 const SITE_URL = 'https://kelimelink.app';
 
 interface StructuredDataProps {
@@ -11,21 +9,33 @@ interface StructuredDataProps {
  * Cleans up on unmount or data change to avoid duplicates.
  */
 export default function StructuredData({ data }: StructuredDataProps) {
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.setAttribute('type', 'application/ld+json');
-    script.textContent = JSON.stringify(data);
-    document.head.appendChild(script);
-
-    return () => {
-      document.head.removeChild(script);
-    };
-  }, [data]);
-
-  return null;
+  const json = JSON.stringify(Array.isArray(data) ? data : [data]);
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: json }}
+    />
+  );
 }
 
 // ── Schema Factories ──────────────────────────────────────────────
+
+export function createOrganizationSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'KelimeLink',
+    url: SITE_URL,
+    logo: `${SITE_URL}/favicon.png`,
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'krmhsnmrcn220@gmail.com',
+      contactType: 'customer support',
+      availableLanguage: 'Turkish',
+    },
+    sameAs: [],
+  };
+}
 
 export function createWebSiteSchema() {
   return {
@@ -36,25 +46,38 @@ export function createWebSiteSchema() {
     description:
       'Her gün yeni bir Türkçe kelime bağlantı bulmacası. İki uzak kelimeyi anlamsal köprüler kurarak birbirine bağlayın.',
     inLanguage: 'tr',
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${SITE_URL}/?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
-    },
   };
 }
 
 export function createWebApplicationSchema() {
   return {
     '@context': 'https://schema.org',
-    '@type': 'WebApplication',
+    '@type': ['WebApplication', 'SoftwareApplication'],
     name: 'KelimeLink',
     url: SITE_URL,
     applicationCategory: 'GameApplication',
+    applicationSubCategory: 'Word Game',
     operatingSystem: 'Web',
+    genre: 'Semantik Kelime Oyunu',
+    numberOfPlayers: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 2 },
+    playMode: ['SinglePlayer', 'MultiPlayer'],
+    inLanguage: 'tr-TR',
     description:
       'KelimeLink, iki kelime arasında anlamsal köprüler kurarak bağlantı oluşturduğunuz bir Türkçe kelime bulmacasıdır. Yapay zeka tabanlı dil modeli kullanarak kelimelerin anlamsal benzerliğini ölçer.',
-    inLanguage: 'tr',
+    audience: {
+      '@type': 'PeopleAudience',
+      audienceType: 'Turkish speakers',
+      geographicArea: 'Turkey'
+    },
+    featureList: [
+      'Günlük bulmaca',
+      'Pratik modu',
+      'Gerçek zamanlı VS modu',
+      'NLP tabanlı semantik analiz'
+    ],
+    screenshot: `${SITE_URL}/og-image.png`,
+    alternateName: ['Linxicon Türkçe', 'Contexto Türkçe', 'Semantle Türkçe'],
+    keywords: 'türkçe kelime oyunu, semantik bulmaca, linxicon alternatifi',
     offers: {
       '@type': 'Offer',
       price: '0',

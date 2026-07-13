@@ -20,6 +20,7 @@ export default function TurkceKelimeOyunlari() {
         path: '/blog/turkce-kelime-oyunlari-tarihi',
         ogTitle: 'Türkçe Kelime Oyunlarının Tarihsel Evrimi',
         ogDescription: 'Kare bulmacalardan modern yapay zeka oyunlarına kelime oyunlarının hikayesi.',
+        ogType: "article",
       }}
       structuredData={articleSchema}
       breadcrumbs={[

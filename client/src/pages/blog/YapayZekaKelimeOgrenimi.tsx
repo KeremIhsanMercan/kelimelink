@@ -20,6 +20,7 @@ export default function YapayZekaKelimeOgrenimi() {
         path: '/blog/yapay-zeka-ve-kelime-ogrenimi',
         ogTitle: 'Semantik Oyunlarla Kelime Öğrenimi',
         ogDescription: 'Kelime oyunlarının ve yapay zekanın dil becerilerine katkısı.',
+        ogType: "article",
       }}
       structuredData={articleSchema}
       breadcrumbs={[
@@ -32,9 +33,9 @@ export default function YapayZekaKelimeOgrenimi() {
       <p className="content-page__date">Yayın Tarihi: 19 Haziran 2026</p>
 
       <p>
-        Yeni kelimeler öğrenmek veya unutulmaya yüz tutmuş kelimeleri hafızada canlandırmak, 
-        beyin sağlığı ve bilişsel esneklik için yapılabilecek en faydalı egzersizlerden biridir. 
-        Geleneksel ezber yöntemlerinin aksine, Doğal Dil İşleme (NLP) tabanlı semantik oyunlar, 
+        Yeni kelimeler öğrenmek veya unutulmaya yüz tutmuş kelimeleri hafızada canlandırmak,
+        beyin sağlığı ve bilişsel esneklik için yapılabilecek en faydalı egzersizlerden biridir.
+        Geleneksel ezber yöntemlerinin aksine, Doğal Dil İşleme (NLP) tabanlı semantik oyunlar,
         öğrenme sürecini aktif, araştırmacı ve analitik bir deneyime dönüştürüyor.
       </p>
 
@@ -42,14 +43,14 @@ export default function YapayZekaKelimeOgrenimi() {
       <p>
         İnsan beyni, kelimeleri alfabetik bir sözlük gibi sıralı şekilde değil, bir "örümcek ağı"
         veya <strong>semantik ağ</strong> şeklinde depolar. Örneğin "deniz" kelimesini düşündüğünüzde,
-        beyniniz anında "mavi", "su", "dalga", "gemi", "kum" ve "yaz" gibi kelimeleri de aktive eder. 
+        beyniniz anında "mavi", "su", "dalga", "gemi", "kum" ve "yaz" gibi kelimeleri de aktive eder.
         KelimeLink gibi oyunlar, tam olarak beynin bu doğal çalışma prensibini temel alır.
       </p>
 
       <h2>Yapay Zeka Oyunlarının Klasik Oyunlardan Farkı</h2>
       <p>
         Klasik kelime oyunlarında genellikle kelimenin yazılışına (harflerin dizilimi) odaklanılır.
-        Ancak NLP destekli semantik oyunlarda hedef, <strong>kavramsal yakınlıktır</strong>. 
+        Ancak NLP destekli semantik oyunlarda hedef, <strong>kavramsal yakınlıktır</strong>.
         Oyuncu, hedef kelimeye ulaşmak için şu zihinsel süreçlerden geçer:
       </p>
       <ul>
@@ -62,7 +63,7 @@ export default function YapayZekaKelimeOgrenimi() {
       <p>
         Yapay zekanın hesapladığı benzerlik skorları (%26, %40, %75 vb.), oyuncuya anında bir
         geri bildirim (feedback) döngüsü sağlar. "Sıcak-Soğuk" oyunu mantığıyla işleyen bu mekanizma,
-        oyuncunun tahminlerini şekillendirmesini sağlar. Eğer "Araba" kelimesi %15 veriyor ama 
+        oyuncunun tahminlerini şekillendirmesini sağlar. Eğer "Araba" kelimesi %15 veriyor ama
         "Motor" kelimesi %30 veriyorsa, beyin otomatik olarak "Demek ki hedef mekanik bir şey ancak araba değil"
         hipotezini kurar ve bu hipotezi test eder.
       </p>
@@ -74,18 +75,18 @@ export default function YapayZekaKelimeOgrenimi() {
       <h2>Aktif Öğrenme (Active Learning) ve Kalıcılık</h2>
       <p>
         Eğitim bilimlerinde "Aktif Öğrenme", bilginin öğrenci tarafından keşfedilerek edinilmesidir.
-        Bir kelimenin anlamını sözlükten okumak pasif bir öğrenmeyken, KelimeLink oynarken 
+        Bir kelimenin anlamını sözlükten okumak pasif bir öğrenmeyken, KelimeLink oynarken
         bilmediğiniz veya çok sık kullanmadığınız bir kelimenin, bir başka kelimeye %60 oranında
         benzediğini şaşırarak keşfetmek <strong>aktif öğrenmedir</strong>. Duygusal bir tepki (şaşırma,
-        sevinç, hüsran) eşliğinde kurulan bu anlamsal bağlantılar, uzun süreli bellekte çok daha 
+        sevinç, hüsran) eşliğinde kurulan bu anlamsal bağlantılar, uzun süreli bellekte çok daha
         kalıcı izler bırakır.
       </p>
 
       <h2>Sonuç</h2>
       <p>
-        Yapay zeka modelleri geliştikçe, dil öğrenimi ve kelime dağarcığı testleri de standart 
+        Yapay zeka modelleri geliştikçe, dil öğrenimi ve kelime dağarcığı testleri de standart
         çoktan seçmeli sınavlardan, dinamik ve anlam odaklı sistemlere doğru evrilmektedir.
-        Her gün sadece 10 dakikanızı ayırarak çözeceğiniz semantik bir bulmaca, zihninizi zinde 
+        Her gün sadece 10 dakikanızı ayırarak çözeceğiniz semantik bir bulmaca, zihninizi zinde
         tutmanın ve ana dilinizin derinliklerini keşfetmenin en eğlenceli yollarından biridir.
       </p>
     </ContentLayout>
